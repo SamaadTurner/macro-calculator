@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Free Macro Calculator - Calculate your daily calorie and macronutrient needs based on your goals.">
+  <meta name="keywords" content="macro calculator, fitness, nutrition, calories, protein, carbs, fats">
+  <title>Macro Calculator - Free Nutrition Tool</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ===================================
+       RESET & BASE STYLES
+       =================================== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Gold + Orange + Black Fitness Palette */
+      --primary: #FFB800;
+      --primary-dark: #FF8C00;
+      --primary-light: #FFD700;
+      --secondary: #FF6B00;
+      --accent: #FFA500;
+
+      --success: #10B981;
+      --warning: #F59E0B;
+      --error: #EF4444;
+
+      --bg-gradient-start: #000000;
+      --bg-gradient-end: #1a1a1a;
+
+      --text-dark: #1F2937;
+      --text-light: #6B7280;
+      --text-white: #FFFFFF;
+
+      --bg-white: #FFFFFF;
+      --bg-light: #F9FAFB;
+      --bg-card: rgba(255, 255, 255, 0.95);
+
+      /* Spacing */
+      --space-xs: 0.5rem;
+      --space-sm: 1rem;
+      --space-md: 1.5rem;
+      --space-lg: 2rem;
+      --space-xl: 3rem;
+      --space-2xl: 4rem;
+
+      /* Border Radius */
+      --radius-sm: 0.5rem;
+      --radius-md: 1rem;
+      --radius-lg: 1.5rem;
+      --radius-xl: 2rem;
+      --radius-full: 9999px;
+
+      /* Shadows */
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+      /* Transitions */
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      color: var(--text-dark);
+      background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ===================================
+       HEADER
+       =================================== */
+    .header {
+      text-align: center;
+      padding: var(--space-xl) var(--space-md);
+      color: var(--text-white);
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: var(--space-sm);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .header p {
+      font-size: 1.125rem;
+      opacity: 0.9;
+      font-weight: 400;
+    }
+
+    /* ===================================
+       CONTAINER
+       =================================== */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 var(--space-md) var(--space-2xl);
+    }
+
+    /* ===================================
+       CARD
+       =================================== */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border-radius: var(--radius-xl);
+      padding: var(--space-xl);
+      box-shadow: var(--shadow-xl);
+      margin-bottom: var(--space-lg);
+    }
+
+    .card-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: var(--space-lg);
+      padding-bottom: var(--space-sm);
+      border-bottom: 3px solid var(--primary);
+    }
+
+    /* ===================================
+       FORM
+       =================================== */
+    .form-grid {
+      display: grid;
+      gap: var(--space-md);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: var(--space-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input,
+    select {
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      font-family: inherit;
+      border: 2px solid #E5E7EB;
+      border-radius: var(--radius-md);
+      background: var(--bg-white);
+      transition: var(--transition);
+      color: var(--text-dark);
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    input.error,
+    select.error {
+      border-color: var(--error);
+    }
+
+    .error-message {
+      color: var(--error);
+      font-size: 0.875rem;
+      margin-top: var(--space-xs);
+      display: none;
+    }
+
+    .error-message:not(:empty) {
+      display: block;
+    }
+
+    .input-hint {
+      font-size: 0.75rem;
+      color: var(--text-light);
+      margin-top: var(--space-xs);
+    }
+
+    /* Unit Toggle */
+    .unit-toggle {
+      display: inline-flex;
+      background: #F3F4F6;
+      border-radius: var(--radius-md);
+      padding: 0.25rem;
+      margin-bottom: var(--space-md);
+    }
+
+    .unit-btn {
+      padding: 0.5rem 1.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      color: var(--text-light);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: var(--transition);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .unit-btn.active {
+      background: var(--bg-white);
+      color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .unit-btn:hover:not(.active) {
+      color: var(--text-dark);
+    }
+
+    /* Height Inputs */
+    .height-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-sm);
+    }
+
+    .input-with-unit {
+      display: flex;
+      gap: var(--space-xs);
+      align-items: center;
+    }
+
+    .input-with-unit input {
+      flex: 1;
+    }
+
+    .unit-label {
+      font-weight: 600;
+      color: var(--text-light);
+      min-width: 40px;
+    }
+
+    /* Goal Buttons */
+    .goal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: var(--space-md);
+      margin-top: var(--space-md);
+    }
+
+    .goal-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-lg);
+      background: var(--bg-white);
+      border: 3px solid #E5E7EB;
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: center;
+      min-height: 140px;
+      justify-content: center;
+    }
+
+    .goal-btn:hover {
+      border-color: var(--primary);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .goal-btn.selected {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: var(--text-white);
+    }
+
+    .goal-icon {
+      font-size: 2.5rem;
+    }
+
+    .goal-label {
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .goal-desc {
+      font-size: 0.875rem;
+      opacity: 0.8;
+    }
+
+    /* Calculate Button */
+    .btn-primary {
+      width: 100%;
+      padding: 1rem 2rem;
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--text-white);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      border: none;
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: var(--transition);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      box-shadow: var(--shadow-md);
+      margin-top: var(--space-lg);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    /* ===================================
+       RESULTS SECTION
+       =================================== */
+    .results {
+      transition: var(--transition);
+    }
+
+    .results.hidden {
+      opacity: 0;
+      max-height: 0;
+      overflow: hidden;
+      padding: 0;
+      margin: 0;
+    }
+
+    .calorie-hero {
+      text-align: center;
+      padding: var(--space-xl);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      border-radius: var(--radius-xl);
+      margin-bottom: var(--space-lg);
+      color: var(--text-white);
+      box-shadow: var(--shadow-xl);
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    .calorie-number {
+      font-size: 4rem;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: var(--space-sm);
+    }
+
+    .calorie-label {
+      font-size: 1.125rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      opacity: 0.9;
+    }
+
+    /* Macro Grid */
+    .macro-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
+    }
+
+    .macro-item {
+      text-align: center;
+      padding: var(--space-lg);
+      background: var(--bg-light);
+      border-radius: var(--radius-lg);
+    }
+
+    .macro-icon {
+      font-size: 2.5rem;
+      margin-bottom: var(--space-sm);
+    }
+
+    .macro-amount {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: var(--space-xs);
+    }
+
+    .macro-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .macro-percentage {
+      font-size: 0.875rem;
+      color: var(--text-light);
+      margin-top: var(--space-xs);
+    }
+
+    /* Progress Bars */
+    .progress-bars {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .progress-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .progress-bar {
+      height: 24px;
+      background: #E5E7EB;
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: var(--radius-full);
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 0;
+    }
+
+    .progress-protein { background: linear-gradient(90deg, #EF4444, #F87171); }
+    .progress-carbs { background: linear-gradient(90deg, #10B981, #34D399); }
+    .progress-fats { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+
+    /* Action Buttons */
+    .results-actions {
+      display: flex;
+      gap: var(--space-md);
+      margin-top: var(--space-lg);
+    }
+
+    .btn-secondary,
+    .btn-outline {
+      flex: 1;
+      padding: 0.875rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .btn-secondary {
+      background: var(--text-dark);
+      color: var(--text-white);
+      border: 2px solid var(--text-dark);
+    }
+
+    .btn-secondary:hover {
+      background: #374151;
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-dark);
+      border: 2px solid #E5E7EB;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--text-dark);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--success);
+      color: var(--text-white);
+      padding: 1rem 1.5rem;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      box-shadow: var(--shadow-xl);
+      animation: slideUp 0.3s ease-out;
+      z-index: 1000;
+    }
+
+    .toast.hidden {
+      display: none;
+    }
+
+    /* ===================================
+       SAVED RESULTS
+       =================================== */
+    .saved-item {
+      background: var(--bg-light);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+      margin-bottom: var(--space-md);
+      border-left: 4px solid var(--primary);
+    }
+
+    .saved-item-date {
+      font-size: var(--font-size-xs);
+      color: var(--text-light);
+      margin-bottom: var(--space-xs);
+    }
+
+    .saved-item-calories {
+      font-size: var(--font-size-2xl);
+      font-weight: var(--font-extrabold);
+      color: var(--primary);
+      margin-bottom: var(--space-xs);
+    }
+
+    .saved-item-macros {
+      display: flex;
+      gap: var(--space-md);
+      font-size: var(--font-size-sm);
+      color: var(--text-dark);
+    }
+
+    .saved-item-macro {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+
+    /* ===================================
+       FOOTER
+       =================================== */
+    .footer {
+      text-align: center;
+      padding: var(--space-xl) var(--space-md);
+      color: var(--text-white);
+    }
+
+    .footer a {
+      color: var(--text-white);
+      text-decoration: underline;
+      font-weight: 600;
+    }
+
+    /* ===================================
+       ANIMATIONS
+       =================================== */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translate(-50%, 20px);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    /* ===================================
+       UTILITIES
+       =================================== */
+    .hidden {
+      display: none !important;
+    }
+
+    /* ===================================
+       RESPONSIVE
+       =================================== */
+    @media (max-width: 640px) {
+      .header h1 {
+        font-size: 2rem;
+      }
+
+      .card {
+        padding: var(--space-lg);
+      }
+
+      .calorie-number {
+        font-size: 3rem;
+      }
+
+      .macro-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .results-actions {
+        flex-direction: column;
+      }
+
+      input,
+      select {
+        font-size: 16px; /* Prevent iOS zoom */
+      }
+
+      .goal-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <h1>Macro Calculator</h1>
+    <p>Calculate your personalized daily nutrition goals</p>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <div class="container">
+
+    <!-- CALCULATOR FORM -->
+    <div class="card">
+      <h2 class="card-title">Your Information</h2>
+
+      <form id="macroForm">
+        <div class="form-grid">
+
+          <!-- Age -->
+          <div class="form-group">
+            <label for="age">Age</label>
+            <input type="number" id="age" min="13" max="100" placeholder="Enter your age" required>
+            <span class="input-hint">13-100 years</span>
+            <span class="error-message" id="age-error"></span>
+          </div>
+
+          <!-- Gender -->
+          <div class="form-group">
+            <label for="gender">Gender</label>
+            <select id="gender" required>
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+            <span class="error-message" id="gender-error"></span>
+          </div>
+
+          <!-- Unit Toggle -->
+          <div>
+            <label>Measurement System</label>
+            <div class="unit-toggle">
+              <button type="button" class="unit-btn active" data-unit="imperial">Imperial</button>
+              <button type="button" class="unit-btn" data-unit="metric">Metric</button>
+            </div>
+          </div>
+
+          <!-- Weight -->
+          <div class="form-group">
+            <label for="weight">Weight</label>
+            <div class="input-with-unit">
+              <input type="number" id="weight" step="0.1" placeholder="Your weight" required>
+              <span class="unit-label" id="weight-unit">lbs</span>
+            </div>
+            <span class="input-hint" id="weight-hint">50-500 lbs</span>
+            <span class="error-message" id="weight-error"></span>
+          </div>
+
+          <!-- Height (Imperial) -->
+          <div class="form-group" id="height-imperial">
+            <label>Height</label>
+            <div class="height-inputs">
+              <input type="number" id="height-ft" min="4" max="7" placeholder="Feet">
+              <input type="number" id="height-in" min="0" max="11" placeholder="Inches">
+            </div>
+            <span class="input-hint">4'0" - 7'6"</span>
+            <span class="error-message" id="height-error"></span>
+          </div>
+
+          <!-- Height (Metric) -->
+          <div class="form-group hidden" id="height-metric">
+            <label for="height-cm">Height</label>
+            <div class="input-with-unit">
+              <input type="number" id="height-cm" min="120" max="230" placeholder="Your height">
+              <span class="unit-label">cm</span>
+            </div>
+            <span class="input-hint">120-230 cm</span>
+          </div>
+
+          <!-- Activity Level -->
+          <div class="form-group">
+            <label for="activity">Activity Level</label>
+            <select id="activity" required>
+              <option value="">Select activity level</option>
+              <option value="1.2">Sedentary - Little/no exercise</option>
+              <option value="1.375">Lightly Active - 1-3 days/week</option>
+              <option value="1.55">Moderately Active - 3-5 days/week</option>
+              <option value="1.725">Very Active - 6-7 days/week</option>
+              <option value="1.9">Athlete - 2x per day training</option>
+            </select>
+            <span class="error-message" id="activity-error"></span>
+          </div>
+
+          <!-- Goal -->
+          <div class="form-group">
+            <label>Your Goal</label>
+            <div class="goal-grid">
+              <button type="button" class="goal-btn" data-goal="cutting">
+                <span class="goal-icon">🔥</span>
+                <span class="goal-label">Cut</span>
+                <span class="goal-desc">Lose fat</span>
+              </button>
+              <button type="button" class="goal-btn" data-goal="maintain">
+                <span class="goal-icon">⚖️</span>
+                <span class="goal-label">Maintain</span>
+                <span class="goal-desc">Stay lean</span>
+              </button>
+              <button type="button" class="goal-btn" data-goal="bulking">
+                <span class="goal-icon">💪</span>
+                <span class="goal-label">Bulk</span>
+                <span class="goal-desc">Build muscle</span>
+              </button>
+            </div>
+            <input type="hidden" id="goal" required>
+            <span class="error-message" id="goal-error"></span>
+          </div>
+
+        </div>
+
+        <button type="submit" class="btn-primary">Calculate Macros</button>
+      </form>
+    </div>
+
+    <!-- RESULTS SECTION -->
+    <div class="results hidden" id="results">
+
+      <!-- Calorie Display -->
+      <div class="calorie-hero">
+        <div class="calorie-number" id="calories">0</div>
+        <div class="calorie-label">Calories per day</div>
+      </div>
+
+      <!-- Macros Card -->
+      <div class="card">
+        <h2 class="card-title">Your Daily Macros</h2>
+
+        <!-- Macro Grid -->
+        <div class="macro-grid">
+          <div class="macro-item">
+            <div class="macro-icon">🥩</div>
+            <div class="macro-amount" id="protein-amount">0g</div>
+            <div class="macro-label">Protein</div>
+            <div class="macro-percentage" id="protein-pct">0%</div>
+          </div>
+
+          <div class="macro-item">
+            <div class="macro-icon">🍚</div>
+            <div class="macro-amount" id="carbs-amount">0g</div>
+            <div class="macro-label">Carbs</div>
+            <div class="macro-percentage" id="carbs-pct">0%</div>
+          </div>
+
+          <div class="macro-item">
+            <div class="macro-icon">🥑</div>
+            <div class="macro-amount" id="fats-amount">0g</div>
+            <div class="macro-label">Fats</div>
+            <div class="macro-percentage" id="fats-pct">0%</div>
+          </div>
+        </div>
+
+        <!-- Progress Bars -->
+        <div class="progress-bars">
+          <div class="progress-item">
+            <div class="progress-label">
+              <span>Protein</span>
+              <span id="protein-bar-pct">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill progress-protein" id="protein-bar"></div>
+            </div>
+          </div>
+
+          <div class="progress-item">
+            <div class="progress-label">
+              <span>Carbs</span>
+              <span id="carbs-bar-pct">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill progress-carbs" id="carbs-bar"></div>
+            </div>
+          </div>
+
+          <div class="progress-item">
+            <div class="progress-label">
+              <span>Fats</span>
+              <span id="fats-bar-pct">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill progress-fats" id="fats-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="results-actions">
+          <button class="btn-secondary" id="saveBtn">
+            <span>💾</span>
+            <span>Save Results</span>
+          </button>
+          <button class="btn-secondary" id="copyBtn">
+            <span>📋</span>
+            <span>Copy</span>
+          </button>
+          <button class="btn-outline" id="recalcBtn">
+            <span>🔄</span>
+            <span>Recalculate</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Saved Results Section -->
+      <div class="card hidden" id="savedResults">
+        <h2 class="card-title">Saved Results</h2>
+        <div id="savedResultsList"></div>
+        <button class="btn-outline" id="clearHistoryBtn" style="margin-top: 1rem;">
+          <span>🗑️</span>
+          <span>Clear History</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p>Made by <a href="https://instagram.com/maad.lifts" target="_blank">@maad.lifts</a> | <a href="https://github.com/SamaadTurner/macro-calculator" target="_blank">View on GitHub</a></p>
+  </footer>
+
+  <!-- TOAST -->
+  <div class="toast hidden" id="toast">✓ Copied to clipboard!</div>
+
+  <!-- JAVASCRIPT -->
+  <script>
+    (function() {
+      'use strict';
+
+      let currentUnit = 'imperial';
+      let calculationResults = null;
+
+      // Conversions
+      const convert = {
+        lbsToKg: (lbs) => lbs * 0.453592,
+        kgToLbs: (kg) => kg / 0.453592,
+        feetInchesToCm: (ft, inch) => ((ft * 12) + inch) * 2.54,
+        cmToFeetInches: (cm) => {
+          const totalInches = cm / 2.54;
+          return {
+            feet: Math.floor(totalInches / 12),
+            inches: Math.round(totalInches % 12)
+          };
+        }
+      };
+
+      // Validators
+      const validate = {
+        age: (age) => {
+          const num = parseInt(age);
+          if (isNaN(num) || !age) return { valid: false, msg: 'Please enter a valid age' };
+          if (num < 13) return { valid: false, msg: 'Age must be at least 13' };
+          if (num > 100) return { valid: false, msg: 'Age must be 100 or less' };
+          return { valid: true };
+        },
+        gender: (gender) => !gender ? { valid: false, msg: 'Please select a gender' } : { valid: true },
+        weight: (weight, unit) => {
+          const num = parseFloat(weight);
+          if (isNaN(num) || !weight) return { valid: false, msg: 'Please enter a valid weight' };
+          if (unit === 'imperial') {
+            if (num < 50) return { valid: false, msg: 'Weight must be at least 50 lbs' };
+            if (num > 500) return { valid: false, msg: 'Weight must be 500 lbs or less' };
+          } else {
+            if (convert.kgToLbs(num) < 50) return { valid: false, msg: 'Weight must be at least 23 kg' };
+            if (convert.kgToLbs(num) > 500) return { valid: false, msg: 'Weight must be 227 kg or less' };
+          }
+          return { valid: true };
+        },
+        height: (ft, inch, cm, unit) => {
+          if (unit === 'imperial') {
+            const f = parseInt(ft);
+            const i = parseInt(inch);
+            if (isNaN(f) || isNaN(i) || !ft || !inch) return { valid: false, msg: 'Please enter feet and inches' };
+            if (f < 4) return { valid: false, msg: 'Height must be at least 4\'0"' };
+            if (f > 7 || (f === 7 && i > 6)) return { valid: false, msg: 'Height must be 7\'6" or less' };
+          } else {
+            const c = parseInt(cm);
+            if (isNaN(c) || !cm) return { valid: false, msg: 'Please enter a valid height' };
+            if (c < 120) return { valid: false, msg: 'Height must be at least 120 cm' };
+            if (c > 230) return { valid: false, msg: 'Height must be 230 cm or less' };
+          }
+          return { valid: true };
+        },
+        activity: (activity) => !activity ? { valid: false, msg: 'Please select your activity level' } : { valid: true },
+        goal: (goal) => !goal ? { valid: false, msg: 'Please select your goal' } : { valid: true }
+      };
+
+      // Calculations
+      function calculateBMR(weightKg, heightCm, age, gender) {
+        const base = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
+        return gender === 'male' ? base + 5 : gender === 'female' ? base - 161 : base - 78;
+      }
+
+      function calculate(data) {
+        const weightKg = data.unit === 'imperial' ? convert.lbsToKg(data.weight) : data.weight;
+        const heightCm = data.unit === 'imperial' ? convert.feetInchesToCm(data.heightFt, data.heightIn) : data.heightCm;
+        const weightLbs = data.unit === 'imperial' ? data.weight : convert.kgToLbs(data.weight);
+
+        const bmr = calculateBMR(weightKg, heightCm, data.age, data.gender);
+        const tdee = bmr * parseFloat(data.activity);
+        const adjustment = data.goal === 'cutting' ? -500 : data.goal === 'bulking' ? 300 : 0;
+        const targetCalories = Math.round(tdee + adjustment);
+
+        const proteinGrams = Math.round(weightLbs);
+        const proteinCals = proteinGrams * 4;
+        const fatCals = Math.round(targetCalories * 0.25);
+        const fatGrams = Math.round(fatCals / 9);
+        const carbCals = targetCalories - proteinCals - fatCals;
+        const carbGrams = Math.round(carbCals / 4);
+
+        return {
+          calories: targetCalories,
+          protein: { grams: proteinGrams, pct: Math.round((proteinCals / targetCalories) * 100) },
+          carbs: { grams: carbGrams, pct: Math.round((carbCals / targetCalories) * 100) },
+          fats: { grams: fatGrams, pct: Math.round((fatCals / targetCalories) * 100) }
+        };
+      }
+
+      // UI Functions
+      function showError(id, msg) {
+        const errorEl = document.getElementById(`${id}-error`);
+        const inputEl = document.getElementById(id);
+        if (errorEl) errorEl.textContent = msg;
+        if (inputEl) inputEl.classList.add('error');
+      }
+
+      function clearError(id) {
+        const errorEl = document.getElementById(`${id}-error`);
+        const inputEl = document.getElementById(id);
+        if (errorEl) errorEl.textContent = '';
+        if (inputEl) inputEl.classList.remove('error');
+      }
+
+      function clearAllErrors() {
+        document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+        document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+      }
+
+      function displayResults(results) {
+        document.getElementById('calories').textContent = results.calories.toLocaleString();
+        document.getElementById('protein-amount').textContent = `${results.protein.grams}g`;
+        document.getElementById('protein-pct').textContent = `${results.protein.pct}%`;
+        document.getElementById('carbs-amount').textContent = `${results.carbs.grams}g`;
+        document.getElementById('carbs-pct').textContent = `${results.carbs.pct}%`;
+        document.getElementById('fats-amount').textContent = `${results.fats.grams}g`;
+        document.getElementById('fats-pct').textContent = `${results.fats.pct}%`;
+
+        setTimeout(() => {
+          document.getElementById('protein-bar').style.width = `${results.protein.pct}%`;
+          document.getElementById('protein-bar-pct').textContent = `${results.protein.pct}%`;
+          document.getElementById('carbs-bar').style.width = `${results.carbs.pct}%`;
+          document.getElementById('carbs-bar-pct').textContent = `${results.carbs.pct}%`;
+          document.getElementById('fats-bar').style.width = `${results.fats.pct}%`;
+          document.getElementById('fats-bar-pct').textContent = `${results.fats.pct}%`;
+        }, 100);
+
+        document.getElementById('results').classList.remove('hidden');
+        setTimeout(() => {
+          document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+
+      function toggleUnits(unit) {
+        currentUnit = unit;
+        document.querySelectorAll('.unit-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.unit === unit);
+        });
+
+        const heightImp = document.getElementById('height-imperial');
+        const heightMet = document.getElementById('height-metric');
+        const weightUnit = document.getElementById('weight-unit');
+        const weightHint = document.getElementById('weight-hint');
+        const weightInput = document.getElementById('weight');
+
+        if (unit === 'imperial') {
+          heightImp.classList.remove('hidden');
+          heightMet.classList.add('hidden');
+          weightUnit.textContent = 'lbs';
+          weightHint.textContent = '50-500 lbs';
+          if (weightInput.value) {
+            weightInput.value = Math.round(convert.kgToLbs(parseFloat(weightInput.value)));
+          }
+        } else {
+          heightImp.classList.add('hidden');
+          heightMet.classList.remove('hidden');
+          weightUnit.textContent = 'kg';
+          weightHint.textContent = '23-227 kg';
+          if (weightInput.value) {
+            weightInput.value = Math.round(convert.lbsToKg(parseFloat(weightInput.value)));
+          }
+        }
+      }
+
+      function copyToClipboard() {
+        if (!calculationResults) return;
+        const text = `MY MACRO PLAN
+
+Daily Calories: ${calculationResults.calories}
+
+MACROS:
+🥩 Protein: ${calculationResults.protein.grams}g (${calculationResults.protein.pct}%)
+🍚 Carbs: ${calculationResults.carbs.grams}g (${calculationResults.carbs.pct}%)
+🥑 Fats: ${calculationResults.fats.grams}g (${calculationResults.fats.pct}%)`;
+
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).then(() => showToast()).catch(() => copyFallback(text));
+        } else {
+          copyFallback(text);
+        }
+      }
+
+      function copyFallback(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+          showToast();
+        } catch (err) {
+          console.error('Copy failed', err);
+        }
+        document.body.removeChild(textarea);
+      }
+
+      function showToast() {
+        const toast = document.getElementById('toast');
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 2000);
+      }
+
+      // Event Handlers
+      document.getElementById('macroForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        clearAllErrors();
+
+        const data = {
+          age: document.getElementById('age').value,
+          gender: document.getElementById('gender').value,
+          weight: parseFloat(document.getElementById('weight').value),
+          heightFt: parseInt(document.getElementById('height-ft').value),
+          heightIn: parseInt(document.getElementById('height-in').value),
+          heightCm: parseInt(document.getElementById('height-cm').value),
+          activity: document.getElementById('activity').value,
+          goal: document.getElementById('goal').value,
+          unit: currentUnit
+        };
+
+        let isValid = true;
+        const checks = [
+          { field: 'age', validator: validate.age(data.age) },
+          { field: 'gender', validator: validate.gender(data.gender) },
+          { field: 'weight', validator: validate.weight(data.weight, data.unit) },
+          { field: 'height', validator: validate.height(data.heightFt, data.heightIn, data.heightCm, data.unit) },
+          { field: 'activity', validator: validate.activity(data.activity) },
+          { field: 'goal', validator: validate.goal(data.goal) }
+        ];
+
+        checks.forEach(check => {
+          if (!check.validator.valid) {
+            showError(check.field, check.validator.msg);
+            isValid = false;
+          }
+        });
+
+        if (!isValid) {
+          document.querySelector('.error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+
+        calculationResults = calculate(data);
+        displayResults(calculationResults);
+      });
+
+      document.querySelectorAll('.unit-btn').forEach(btn => {
+        btn.addEventListener('click', () => toggleUnits(btn.dataset.unit));
+      });
+
+      document.querySelectorAll('.goal-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.goal-btn').forEach(b => b.classList.remove('selected'));
+          this.classList.add('selected');
+          document.getElementById('goal').value = this.dataset.goal;
+          clearError('goal');
+        });
+      });
+
+      // Save Results Functions
+      function saveResults() {
+        if (!calculationResults) return;
+
+        const savedData = JSON.parse(localStorage.getItem('macroHistory') || '[]');
+        const newEntry = {
+          date: new Date().toLocaleString(),
+          timestamp: Date.now(),
+          ...calculationResults
+        };
+
+        savedData.unshift(newEntry); // Add to beginning
+        if (savedData.length > 10) savedData.pop(); // Keep last 10
+
+        localStorage.setItem('macroHistory', JSON.stringify(savedData));
+        loadSavedResults();
+        showToast('Results saved!');
+      }
+
+      function loadSavedResults() {
+        const savedData = JSON.parse(localStorage.getItem('macroHistory') || '[]');
+        const container = document.getElementById('savedResultsList');
+        const savedSection = document.getElementById('savedResults');
+
+        if (savedData.length === 0) {
+          savedSection.classList.add('hidden');
+          return;
+        }
+
+        savedSection.classList.remove('hidden');
+        container.innerHTML = savedData.map(item => `
+          <div class="saved-item">
+            <div class="saved-item-date">${item.date}</div>
+            <div class="saved-item-calories">${item.calories.toLocaleString()} cal/day</div>
+            <div class="saved-item-macros">
+              <div class="saved-item-macro">🥩 ${item.protein.grams}g</div>
+              <div class="saved-item-macro">🍚 ${item.carbs.grams}g</div>
+              <div class="saved-item-macro">🥑 ${item.fats.grams}g</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      function clearHistory() {
+        if (confirm('Clear all saved results?')) {
+          localStorage.removeItem('macroHistory');
+          loadSavedResults();
+          showToast('History cleared!');
+        }
+      }
+
+      function showToast(message = '✓ Copied to clipboard!') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 2000);
+      }
+
+      document.getElementById('copyBtn')?.addEventListener('click', copyToClipboard);
+      document.getElementById('saveBtn')?.addEventListener('click', saveResults);
+      document.getElementById('clearHistoryBtn')?.addEventListener('click', clearHistory);
+
+      document.getElementById('recalcBtn')?.addEventListener('click', () => {
+        document.getElementById('macroForm').scrollIntoView({ behavior: 'smooth' });
+      });
+
+      document.querySelectorAll('input, select').forEach(input => {
+        input.addEventListener('input', () => {
+          const id = input.id.includes('height-') ? 'height' : input.id;
+          clearError(id);
+        });
+      });
+
+      toggleUnits('imperial');
+      loadSavedResults(); // Load saved results on page load
+    })();
+  </script>
+
+</body>
+</html>
