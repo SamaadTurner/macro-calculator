@@ -931,8 +931,8 @@
         height: (ft, inch, cm, unit) => {
           if (unit === 'imperial') {
             const f = parseInt(ft);
-            const i = parseInt(inch);
-            if (isNaN(f) || isNaN(i) || !ft || !inch) return { valid: false, msg: 'Please enter feet and inches' };
+            const i = parseInt(inch || '0');
+            if (!ft || isNaN(f) || isNaN(i)) return { valid: false, msg: 'Please enter feet (inches optional)' };
             if (f < 4) return { valid: false, msg: 'Height must be at least 4\'0"' };
             if (f > 7 || (f === 7 && i > 6)) return { valid: false, msg: 'Height must be 7\'6" or less' };
           } else {
@@ -1103,7 +1103,8 @@ MACROS:
           gender: document.getElementById('gender').value,
           weight: parseFloat(document.getElementById('weight').value),
           heightFt: parseInt(document.getElementById('height-ft').value),
-          heightIn: parseInt(document.getElementById('height-in').value),
+        heightIn: parseInt(document.getElementById('height-in').value || '0'),
+
           heightCm: parseInt(document.getElementById('height-cm').value),
           activity: document.getElementById('activity').value,
           goal: document.getElementById('goal').value,
