@@ -91,13 +91,7 @@ export default function App() {
       <header className="topbar">
         <a className="brand" href="./">
           <svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true">
-            <defs>
-              <linearGradient id="brand-grad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stopColor="#FFB800" />
-                <stop offset="1" stopColor="#FF6B00" />
-              </linearGradient>
-            </defs>
-            <circle cx="32" cy="32" r="22" fill="none" stroke="url(#brand-grad)" strokeWidth="9" strokeDasharray="100 38" strokeLinecap="round" transform="rotate(-90 32 32)" />
+            <circle className="brand-mark" cx="32" cy="32" r="22" fill="none" strokeWidth="9" strokeDasharray="100 38" strokeLinecap="round" transform="rotate(-90 32 32)" />
           </svg>
           <span className="brand-name">Macros</span>
         </a>

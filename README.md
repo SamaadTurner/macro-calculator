@@ -6,8 +6,9 @@ active you are, and your goal (lose fat, maintain or build muscle).
 **Live:** https://samaadturner.github.io/macro-calculator/
 
 <p>
-  <img src="docs/screenshots/goal-step.png" alt="Goal step with three goal cards" width="280">
-  <img src="docs/screenshots/results.png" alt="Results page with a macro ring and grams per macro" width="280">
+  <img src="docs/screenshots/goal-step.png" alt="Goal step with three goal cards" width="260">
+  <img src="docs/screenshots/results.png" alt="Results page with a macro ring and grams per macro" width="260">
+  <img src="docs/screenshots/results-dark.png" alt="The same results page in dark mode" width="260">
 </p>
 
 No sign-up and no server. Answers and saved plans stay in the browser's local storage, so a
@@ -22,6 +23,8 @@ returning visitor lands straight on their results.
   updates the numbers right away, grams per meal for 3 to 6 meals, and the working behind the
   numbers.
 - Save up to ten plans on the device, copy a plan as text, or share it from a phone.
+- Light and dark themes in warm gym colours (cream walls, wood, black iron), following the
+  phone's setting.
 
 ## How the numbers are worked out
 
@@ -48,7 +51,8 @@ trend after 2 to 3 weeks.
 
 React 18 and TypeScript on Vite. No UI or chart library: the ring is a small SVG component and
 the styles are one CSS file of design tokens (colours, type, spacing) in
-[`src/styles.css`](src/styles.css). Fonts (Inter and Barlow Condensed) are bundled, not loaded
+[`src/styles.css`](src/styles.css), with a light set and a dark set. The macro colours were
+checked for colour-blind separation and contrast against both card colours. Fonts (Inter and Barlow Condensed) are bundled, not loaded
 from Google.
 
 ```
@@ -65,11 +69,12 @@ e2e/            Playwright tests, including axe accessibility scans
 - **52 unit tests** (Vitest) for the math, the checks, unit switching and storage. Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
-- **19 end-to-end tests** (Playwright) on a desktop and a phone screen (38 runs), against the
-  production build. They cover the full flow in both unit systems, every error message, unit
+- **22 end-to-end tests** (Playwright) on a desktop and a touch phone screen (42 runs; one
+  test is mouse-only and one is touch-only), against the production build. They cover the full flow in both unit systems, every error message, unit
   switching, the calorie floor, the under-18 rule, saved plans, returning visitors, broken saved
-  data, keyboard use, no sideways scrolling, and an [axe](https://github.com/dequelabs/axe-core)
-  scan for WCAG 2.1 A and AA rules on every step, with and without errors showing.
+  data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, and an
+  [axe](https://github.com/dequelabs/axe-core) scan for WCAG 2.1 A and AA rules on every step,
+  with and without errors showing, in light and dark mode.
 
 GitHub Actions runs lint, type checks, unit tests, the build and the end-to-end tests on every
 push. The site is deployed to GitHub Pages from `main` only after all of them pass.
@@ -95,7 +100,6 @@ npm run dev            # http://localhost:5173/macro-calculator/
 ## Known limits
 
 - Uses a formula only. It does not learn from your real weight changes yet.
-- Dark theme only.
 - `npm audit` reports moderate advisories in development-only packages (the Vite dev server and
   Vitest). None of that code is in the built site.
 

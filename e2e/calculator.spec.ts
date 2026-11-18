@@ -205,3 +205,21 @@ test('the page never scrolls sideways', async ({ page }) => {
   await answerAll(page, averageMan)
   expect(await overflows()).toBe(false)
 })
+
+test('tapping the ring on a phone does not leave a macro highlighted', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'touch only')
+  await answerAll(page, averageMan)
+  await page.locator('.ring').tap()
+  await page.getByTestId('macro-carbs').tap()
+  await expect(page.locator('.ring-seg.is-dim')).toHaveCount(0)
+  await expect(page.locator('.macro-row.is-active')).toHaveCount(0)
+})
+
+test('hovering a macro with a mouse highlights it', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'mouse only')
+  await answerAll(page, averageMan)
+  await page.getByTestId('macro-protein').hover()
+  await expect(page.locator('.ring-seg.is-dim')).toHaveCount(2)
+  await page.mouse.move(0, 0)
+  await expect(page.locator('.ring-seg.is-dim')).toHaveCount(0)
+})

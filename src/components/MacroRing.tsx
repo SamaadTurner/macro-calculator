@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { PointerEvent } from 'react'
 import type { MacroPlan } from '../engine/types'
 
 export const MACROS = [
@@ -18,11 +19,18 @@ const GAP = 4
 
 /**
  * Ring of calories by macro with the daily total in the middle. Hovering a segment or a row
- * highlights the pair. The middle always shows calories: on a phone the ring often appears
- * under the finger that just tapped, and a stuck hover would hide the total.
+ * with a mouse highlights the pair. Touch is ignored: phones send hover events on a tap, and
+ * the ring often appears under the finger that just pressed "See my macros", which left one
+ * macro highlighted and the rest dimmed.
  */
 export function MacroRing({ plan }: { plan: MacroPlan }) {
   const [active, setActive] = useState<MacroKey | null>(null)
+  const hoverProps = (key: MacroKey) => ({
+    onPointerEnter: (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') setActive(key)
+    },
+    onPointerLeave: () => setActive(null),
+  })
 
   let offset = 0
   const segments = MACROS.map(macro => {
@@ -55,8 +63,7 @@ export function MacroRing({ plan }: { plan: MacroPlan }) {
                 strokeWidth={STROKE}
                 strokeDasharray={`${segment.length} ${CIRCUMFERENCE}`}
                 strokeDashoffset={-segment.offset}
-                onMouseEnter={() => setActive(segment.key)}
-                onMouseLeave={() => setActive(null)}
+                {...hoverProps(segment.key)}
               />
             ))}
           </g>
@@ -75,8 +82,7 @@ export function MacroRing({ plan }: { plan: MacroPlan }) {
             key={macro.key}
             className={`macro-row${active === macro.key ? ' is-active' : ''}`}
             data-testid={`macro-${macro.key}`}
-            onMouseEnter={() => setActive(macro.key)}
-            onMouseLeave={() => setActive(null)}
+            {...hoverProps(macro.key)}
           >
             <span className={`swatch seg-${macro.key}`} aria-hidden="true" />
             <span className="macro-name">{macro.label}</span>

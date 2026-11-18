@@ -46,3 +46,15 @@ test('each step passes axe checks when shown with errors', async ({ page }) => {
     if (step !== 'Step 4 of 4') await continueButton(page).click()
   }
 })
+
+test.describe('dark mode', () => {
+  test.use({ colorScheme: 'dark' })
+
+  test('the results page passes axe checks in dark mode', async ({ page }) => {
+    await page.goto('./')
+    await continueButton(page).click()
+    await expectNoViolations(page)
+    await answerAll(page, averageMan)
+    await expectNoViolations(page)
+  })
+})
