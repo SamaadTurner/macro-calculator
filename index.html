@@ -195,6 +195,21 @@
       margin-top: var(--space-xs);
     }
 
+    .results-notes {
+      margin-top: var(--space-md);
+      font-size: 0.875rem;
+      color: var(--text-light);
+    }
+
+    .results-notes p + p {
+      margin-top: var(--space-xs);
+    }
+
+    .results-notes .notice {
+      color: var(--text-dark);
+      font-weight: 600;
+    }
+
     /* Unit Toggle */
     .unit-toggle {
       display: inline-flex;
@@ -233,6 +248,14 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: var(--space-sm);
+    }
+
+    /* Let inputs shrink to the column instead of their default width, so the form fits a phone. */
+    .height-inputs input,
+    .form-grid select,
+    .input-with-unit input {
+      min-width: 0;
+      width: 100%;
     }
 
     .input-with-unit {
@@ -668,35 +691,35 @@
     <div class="card">
       <h2 class="card-title">Your Information</h2>
 
-      <form id="macroForm">
+      <form id="macroForm" novalidate>
         <div class="form-grid">
 
           <!-- Age -->
           <div class="form-group">
             <label for="age">Age</label>
-            <input type="number" id="age" min="13" max="100" placeholder="Enter your age" required>
-            <span class="input-hint">13-100 years</span>
-            <span class="error-message" id="age-error"></span>
+            <input type="number" id="age" inputmode="numeric" min="13" max="100" placeholder="Enter your age" aria-describedby="age-hint age-error">
+            <span class="input-hint" id="age-hint">13-100 years</span>
+            <span class="error-message" id="age-error" aria-live="polite"></span>
           </div>
 
           <!-- Gender -->
           <div class="form-group">
             <label for="gender">Gender</label>
-            <select id="gender" required>
+            <select id="gender" aria-describedby="gender-error">
               <option value="">Select gender</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
               <option value="other">Other</option>
             </select>
-            <span class="error-message" id="gender-error"></span>
+            <span class="error-message" id="gender-error" aria-live="polite"></span>
           </div>
 
           <!-- Unit Toggle -->
           <div>
-            <label>Measurement System</label>
-            <div class="unit-toggle">
-              <button type="button" class="unit-btn active" data-unit="imperial">Imperial</button>
-              <button type="button" class="unit-btn" data-unit="metric">Metric</button>
+            <label id="unit-label">Measurement System</label>
+            <div class="unit-toggle" role="group" aria-labelledby="unit-label">
+              <button type="button" class="unit-btn active" data-unit="imperial" aria-pressed="true">Imperial</button>
+              <button type="button" class="unit-btn" data-unit="metric" aria-pressed="false">Metric</button>
             </div>
           </div>
 
@@ -704,38 +727,37 @@
           <div class="form-group">
             <label for="weight">Weight</label>
             <div class="input-with-unit">
-              <input type="number" id="weight" step="0.1" placeholder="Your weight" required>
+              <input type="number" id="weight" inputmode="decimal" step="any" placeholder="Your weight" aria-describedby="weight-hint weight-error">
               <span class="unit-label" id="weight-unit">lbs</span>
             </div>
             <span class="input-hint" id="weight-hint">50-500 lbs</span>
-            <span class="error-message" id="weight-error"></span>
+            <span class="error-message" id="weight-error" aria-live="polite"></span>
           </div>
 
-          <!-- Height (Imperial) -->
-          <div class="form-group" id="height-imperial">
-            <label>Height</label>
-            <div class="height-inputs">
-              <input type="number" id="height-ft" min="4" max="7" placeholder="Feet">
-              <input type="number" id="height-in" min="0" max="11" placeholder="Inches">
+          <!-- Height: feet and inches, or centimetres -->
+          <div class="form-group" id="height-group">
+            <label id="height-label" for="height-ft">Height</label>
+            <div id="height-imperial">
+              <div class="height-inputs">
+                <input type="number" id="height-ft" inputmode="numeric" min="4" max="7" placeholder="Feet" aria-label="Height, feet" aria-describedby="height-hint-imperial height-error">
+                <input type="number" id="height-in" inputmode="decimal" step="any" min="0" max="11" placeholder="Inches" aria-label="Height, inches" aria-describedby="height-hint-imperial height-error">
+              </div>
+              <span class="input-hint" id="height-hint-imperial">4'0" - 7'6"</span>
             </div>
-            <span class="input-hint">4'0" - 7'6"</span>
-            <span class="error-message" id="height-error"></span>
-          </div>
-
-          <!-- Height (Metric) -->
-          <div class="form-group hidden" id="height-metric">
-            <label for="height-cm">Height</label>
-            <div class="input-with-unit">
-              <input type="number" id="height-cm" min="120" max="230" placeholder="Your height">
-              <span class="unit-label">cm</span>
+            <div class="hidden" id="height-metric">
+              <div class="input-with-unit">
+                <input type="number" id="height-cm" inputmode="decimal" step="any" min="120" max="230" placeholder="Your height" aria-label="Height, centimetres" aria-describedby="height-hint-metric height-error">
+                <span class="unit-label">cm</span>
+              </div>
+              <span class="input-hint" id="height-hint-metric">120-230 cm</span>
             </div>
-            <span class="input-hint">120-230 cm</span>
+            <span class="error-message" id="height-error" aria-live="polite"></span>
           </div>
 
           <!-- Activity Level -->
           <div class="form-group">
             <label for="activity">Activity Level</label>
-            <select id="activity" required>
+            <select id="activity" aria-describedby="activity-error">
               <option value="">Select activity level</option>
               <option value="1.2">Sedentary - Little/no exercise</option>
               <option value="1.375">Lightly Active - 1-3 days/week</option>
@@ -743,31 +765,31 @@
               <option value="1.725">Very Active - 6-7 days/week</option>
               <option value="1.9">Athlete - 2x per day training</option>
             </select>
-            <span class="error-message" id="activity-error"></span>
+            <span class="error-message" id="activity-error" aria-live="polite"></span>
           </div>
 
           <!-- Goal -->
           <div class="form-group">
-            <label>Your Goal</label>
-            <div class="goal-grid">
-              <button type="button" class="goal-btn" data-goal="cutting">
+            <label id="goal-label">Your Goal</label>
+            <div class="goal-grid" role="group" aria-labelledby="goal-label">
+              <button type="button" class="goal-btn" data-goal="cutting" aria-pressed="false">
                 <span class="goal-icon">🔥</span>
                 <span class="goal-label">Cut</span>
                 <span class="goal-desc">Lose fat</span>
               </button>
-              <button type="button" class="goal-btn" data-goal="maintain">
+              <button type="button" class="goal-btn" data-goal="maintain" aria-pressed="false">
                 <span class="goal-icon">⚖️</span>
                 <span class="goal-label">Maintain</span>
                 <span class="goal-desc">Stay lean</span>
               </button>
-              <button type="button" class="goal-btn" data-goal="bulking">
+              <button type="button" class="goal-btn" data-goal="bulking" aria-pressed="false">
                 <span class="goal-icon">💪</span>
                 <span class="goal-label">Bulk</span>
                 <span class="goal-desc">Build muscle</span>
               </button>
             </div>
-            <input type="hidden" id="goal" required>
-            <span class="error-message" id="goal-error"></span>
+            <input type="hidden" id="goal">
+            <span class="error-message" id="goal-error" aria-live="polite"></span>
           </div>
 
         </div>
@@ -846,6 +868,8 @@
           </div>
         </div>
 
+        <div class="results-notes" id="results-notes"></div>
+
         <!-- Actions -->
         <div class="results-actions">
           <button class="btn-secondary" id="saveBtn">
@@ -882,180 +906,369 @@
   </footer>
 
   <!-- TOAST -->
-  <div class="toast hidden" id="toast">✓ Copied to clipboard!</div>
+  <div class="toast hidden" id="toast" role="status">✓ Copied to clipboard!</div>
 
   <!-- JAVASCRIPT -->
   <script>
     (function() {
       'use strict';
 
+      const KG_PER_LB = 0.45359237;
+      const CM_PER_INCH = 2.54;
+
+      // Lowest daily targets the app will suggest without a doctor or dietitian involved.
+      const CALORIE_FLOOR = { male: 1500, female: 1200, other: 1350 };
+
+      // Protein in grams per kg of reference weight. Gains level off around 1.6 g/kg
+      // (Morton et al. 2018); a little more during a cut helps keep muscle.
+      const PROTEIN_G_PER_KG = { cutting: 2.2, maintain: 1.8, bulking: 1.8 };
+      const PROTEIN_MAX_SHARE = 0.40;
+      const FAT_SHARE = 0.25;
+
+      // Above a BMI of 25, protein is based on the weight at BMI 25 for that height,
+      // because total weight overstates muscle at higher body fat.
+      const REFERENCE_BMI = 25;
+
       let currentUnit = 'imperial';
       let calculationResults = null;
 
-      // Conversions
-      const convert = {
-        lbsToKg: (lbs) => lbs * 0.453592,
-        kgToLbs: (kg) => kg / 0.453592,
-        feetInchesToCm: (ft, inch) => ((ft * 12) + inch) * 2.54,
-        cmToFeetInches: (cm) => {
-          const totalInches = cm / 2.54;
-          return {
-            feet: Math.floor(totalInches / 12),
-            inches: Math.round(totalInches % 12)
-          };
-        }
-      };
+      const el = (id) => document.getElementById(id);
 
-      // Validators
-      const validate = {
-        age: (age) => {
-          const num = parseInt(age);
-          if (isNaN(num) || !age) return { valid: false, msg: 'Please enter a valid age' };
-          if (num < 13) return { valid: false, msg: 'Age must be at least 13' };
-          if (num > 100) return { valid: false, msg: 'Age must be 100 or less' };
-          return { valid: true };
-        },
-        gender: (gender) => !gender ? { valid: false, msg: 'Please select a gender' } : { valid: true },
-        weight: (weight, unit) => {
-          const num = parseFloat(weight);
-          if (isNaN(num) || !weight) return { valid: false, msg: 'Please enter a valid weight' };
-          if (unit === 'imperial') {
-            if (num < 50) return { valid: false, msg: 'Weight must be at least 50 lbs' };
-            if (num > 500) return { valid: false, msg: 'Weight must be 500 lbs or less' };
-          } else {
-            if (convert.kgToLbs(num) < 50) return { valid: false, msg: 'Weight must be at least 23 kg' };
-            if (convert.kgToLbs(num) > 500) return { valid: false, msg: 'Weight must be 227 kg or less' };
-          }
-          return { valid: true };
-        },
-        height: (ft, inch, cm, unit) => {
-          if (unit === 'imperial') {
-            const f = parseInt(ft);
-            const i = parseInt(inch || '0');
-            if (!ft || isNaN(f) || isNaN(i)) return { valid: false, msg: 'Please enter feet (inches optional)' };
-            if (f < 4) return { valid: false, msg: 'Height must be at least 4\'0"' };
-            if (f > 7 || (f === 7 && i > 6)) return { valid: false, msg: 'Height must be 7\'6" or less' };
-          } else {
-            const c = parseInt(cm);
-            if (isNaN(c) || !cm) return { valid: false, msg: 'Please enter a valid height' };
-            if (c < 120) return { valid: false, msg: 'Height must be at least 120 cm' };
-            if (c > 230) return { valid: false, msg: 'Height must be 230 cm or less' };
-          }
-          return { valid: true };
-        },
-        activity: (activity) => !activity ? { valid: false, msg: 'Please select your activity level' } : { valid: true },
-        goal: (goal) => !goal ? { valid: false, msg: 'Please select your goal' } : { valid: true }
-      };
+      // ---------- Reading inputs ----------
 
-      // Calculations
-      function calculateBMR(weightKg, heightCm, age, gender) {
-        const base = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
-        return gender === 'male' ? base + 5 : gender === 'female' ? base - 161 : base - 78;
+      // Returns a number, null for an empty box, or NaN for text the browser could not read as a number.
+      function readNumber(input) {
+        if (input.validity && input.validity.badInput) return NaN;
+        const text = input.value.trim();
+        if (text === '') return null;
+        return Number(text);
       }
 
-      function calculate(data) {
-        const weightKg = data.unit === 'imperial' ? convert.lbsToKg(data.weight) : data.weight;
-        const heightCm = data.unit === 'imperial' ? convert.feetInchesToCm(data.heightFt, data.heightIn) : data.heightCm;
-        const weightLbs = data.unit === 'imperial' ? data.weight : convert.kgToLbs(data.weight);
+      function roundTo(value, decimals) {
+        const factor = Math.pow(10, decimals);
+        return Math.round(value * factor) / factor;
+      }
 
-        const bmr = calculateBMR(weightKg, heightCm, data.age, data.gender);
-        const tdee = bmr * parseFloat(data.activity);
-        const adjustment = data.goal === 'cutting' ? -500 : data.goal === 'bulking' ? 300 : 0;
-        const targetCalories = Math.round(tdee + adjustment);
+      // ---------- Validation ----------
+      // Each check returns a message, or '' when the value is fine.
 
-        const proteinGrams = Math.round(weightLbs);
-        const proteinCals = proteinGrams * 4;
-        const fatCals = Math.round(targetCalories * 0.25);
-        const fatGrams = Math.round(fatCals / 9);
-        const carbCals = targetCalories - proteinCals - fatCals;
-        const carbGrams = Math.round(carbCals / 4);
+      function checkAge(age) {
+        if (age === null) return 'Please enter your age';
+        if (!Number.isInteger(age)) return 'Please enter your age as a whole number';
+        if (age < 13) return 'Age must be at least 13';
+        if (age > 100) return 'Age must be 100 or less';
+        return '';
+      }
+
+      function checkWeight(weight, unit) {
+        if (weight === null) return 'Please enter your weight';
+        if (Number.isNaN(weight)) return 'Please enter your weight as a number';
+        if (unit === 'imperial') {
+          if (weight < 50 || weight > 500) return 'Weight must be between 50 and 500 lbs';
+        } else if (weight < 23 || weight > 227) {
+          return 'Weight must be between 23 and 227 kg';
+        }
+        return '';
+      }
+
+      function checkHeight(feet, inches, cm, unit) {
+        if (unit === 'metric') {
+          if (cm === null) return 'Please enter your height';
+          if (Number.isNaN(cm)) return 'Please enter your height as a number';
+          if (cm < 120 || cm > 230) return 'Height must be between 120 and 230 cm';
+          return '';
+        }
+        if (feet === null) return 'Please enter feet (inches are optional)';
+        if (Number.isNaN(feet) || Number.isNaN(inches)) return 'Please enter your height as numbers';
+        if (!Number.isInteger(feet)) return 'Please enter whole feet and put the rest in inches';
+        if (inches < 0 || inches >= 12) return 'Inches must be between 0 and 11';
+        const totalInches = feet * 12 + inches;
+        if (totalInches < 48 || totalInches > 90) return 'Height must be between 4 ft 0 in and 7 ft 6 in';
+        return '';
+      }
+
+      function checkGoal(goal, age) {
+        if (!goal) return 'Please select your goal';
+        if (goal === 'cutting' && Number.isInteger(age) && age < 18) {
+          return 'Cutting is not offered under 18. Please talk to a doctor or dietitian first.';
+        }
+        return '';
+      }
+
+      // ---------- Calculations ----------
+
+      function calculateBMR(weightKg, heightCm, age, gender) {
+        // Mifflin-St Jeor. "Other" uses the average of the male and female versions.
+        const base = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
+        if (gender === 'male') return base + 5;
+        if (gender === 'female') return base - 161;
+        return base - 78;
+      }
+
+      function calculate(person) {
+        const notes = [];
+        const bmr = calculateBMR(person.weightKg, person.heightCm, person.age, person.gender);
+        const tdee = bmr * person.activity;
+
+        // A fixed 500 calorie cut is too much for a small person, so cut at most 20%.
+        let adjustment = 0;
+        if (person.goal === 'cutting') adjustment = -Math.min(500, tdee * 0.20);
+        if (person.goal === 'bulking') adjustment = 300;
+
+        let calories = Math.round(tdee + adjustment);
+        const floor = CALORIE_FLOOR[person.gender] || CALORIE_FLOOR.other;
+        if (calories < floor) {
+          calories = floor;
+          notes.push(`Raised to ${floor.toLocaleString()} calories, the lowest target this calculator gives. Going lower should be planned with a doctor or dietitian.`);
+        }
+
+        const heightM = person.heightCm / 100;
+        const referenceKg = Math.min(person.weightKg, REFERENCE_BMI * heightM * heightM);
+        let proteinGrams = Math.round(referenceKg * PROTEIN_G_PER_KG[person.goal]);
+        const maxProteinGrams = Math.floor((calories * PROTEIN_MAX_SHARE) / 4);
+        if (proteinGrams > maxProteinGrams) {
+          proteinGrams = maxProteinGrams;
+          notes.push('Protein is capped at 40% of calories so there is room for carbs and fats.');
+        }
+
+        const fatGrams = Math.round((calories * FAT_SHARE) / 9);
+        // Protein is at most 40% and fat about 25%, so carbs are never below about 35%.
+        const carbGrams = Math.round((calories - proteinGrams * 4 - fatGrams * 9) / 4);
+
+        // Percentages come from the rounded grams, and carbs take the remainder so they add up to 100.
+        const proteinPct = Math.round((proteinGrams * 4 / calories) * 100);
+        const fatPct = Math.round((fatGrams * 9 / calories) * 100);
+        const carbPct = 100 - proteinPct - fatPct;
 
         return {
-          calories: targetCalories,
-          protein: { grams: proteinGrams, pct: Math.round((proteinCals / targetCalories) * 100) },
-          carbs: { grams: carbGrams, pct: Math.round((carbCals / targetCalories) * 100) },
-          fats: { grams: fatGrams, pct: Math.round((fatCals / targetCalories) * 100) }
+          calories: calories,
+          protein: { grams: proteinGrams, pct: proteinPct },
+          carbs: { grams: carbGrams, pct: carbPct },
+          fats: { grams: fatGrams, pct: fatPct },
+          notes: notes
         };
       }
 
-      // UI Functions
-      function showError(id, msg) {
-        const errorEl = document.getElementById(`${id}-error`);
-        const inputEl = document.getElementById(id);
-        if (errorEl) errorEl.textContent = msg;
-        if (inputEl) inputEl.classList.add('error');
+      // ---------- Errors ----------
+
+      const fieldInputs = {
+        age: ['age'],
+        gender: ['gender'],
+        weight: ['weight'],
+        height: ['height-ft', 'height-in', 'height-cm'],
+        activity: ['activity'],
+        goal: []
+      };
+
+      function showError(field, msg) {
+        el(`${field}-error`).textContent = msg;
+        fieldInputs[field].forEach(id => {
+          el(id).classList.add('error');
+          el(id).setAttribute('aria-invalid', 'true');
+        });
       }
 
-      function clearError(id) {
-        const errorEl = document.getElementById(`${id}-error`);
-        const inputEl = document.getElementById(id);
-        if (errorEl) errorEl.textContent = '';
-        if (inputEl) inputEl.classList.remove('error');
+      function clearError(field) {
+        el(`${field}-error`).textContent = '';
+        fieldInputs[field].forEach(id => {
+          el(id).classList.remove('error');
+          el(id).removeAttribute('aria-invalid');
+        });
       }
 
       function clearAllErrors() {
-        document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-        document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+        Object.keys(fieldInputs).forEach(clearError);
+      }
+
+      // ---------- Unit switching ----------
+      // A converted value is shown rounded, but the exact metric value is kept on the element.
+      // If the user has not edited the box since, switching back uses the exact value,
+      // so going back and forth never drifts.
+
+      function heightShownNow() {
+        return `${el('height-ft').value}|${el('height-in').value}|${el('height-cm').value}`;
+      }
+
+      function weightInKg() {
+        const input = el('weight');
+        if (input.value !== '' && input.value === input.dataset.shown) return Number(input.dataset.exactKg);
+        const value = readNumber(input);
+        if (value === null || Number.isNaN(value)) return null;
+        return currentUnit === 'imperial' ? value * KG_PER_LB : value;
+      }
+
+      function heightInCm() {
+        const group = el('height-group');
+        if (group.dataset.exactCm && group.dataset.shown === heightShownNow()) return Number(group.dataset.exactCm);
+        if (currentUnit === 'metric') {
+          const cm = readNumber(el('height-cm'));
+          return (cm === null || Number.isNaN(cm)) ? null : cm;
+        }
+        const feet = readNumber(el('height-ft'));
+        const inches = readNumber(el('height-in'));
+        if (feet === null || Number.isNaN(feet) || Number.isNaN(inches)) return null;
+        return (feet * 12 + (inches || 0)) * CM_PER_INCH;
+      }
+
+      function showUnitFields(unit) {
+        document.querySelectorAll('.unit-btn').forEach(btn => {
+          const active = btn.dataset.unit === unit;
+          btn.classList.toggle('active', active);
+          btn.setAttribute('aria-pressed', String(active));
+        });
+        el('height-imperial').classList.toggle('hidden', unit !== 'imperial');
+        el('height-metric').classList.toggle('hidden', unit !== 'metric');
+        el('height-label').htmlFor = unit === 'imperial' ? 'height-ft' : 'height-cm';
+        el('weight-unit').textContent = unit === 'imperial' ? 'lbs' : 'kg';
+        el('weight-hint').textContent = unit === 'imperial' ? '50-500 lbs' : '23-227 kg';
+      }
+
+      function switchUnits(unit) {
+        if (unit === currentUnit) return;
+        const kg = weightInKg();
+        const cm = heightInCm();
+        currentUnit = unit;
+        showUnitFields(unit);
+
+        const weightInput = el('weight');
+        if (kg !== null) {
+          weightInput.value = unit === 'imperial' ? roundTo(kg / KG_PER_LB, 1) : roundTo(kg, 1);
+          weightInput.dataset.exactKg = String(kg);
+          weightInput.dataset.shown = weightInput.value;
+        }
+
+        if (cm !== null) {
+          if (unit === 'metric') {
+            el('height-cm').value = roundTo(cm, 1);
+          } else {
+            let feet = Math.floor(cm / CM_PER_INCH / 12);
+            let inches = roundTo(cm / CM_PER_INCH - feet * 12, 1);
+            if (inches >= 12) { feet += 1; inches = 0; }
+            el('height-ft').value = feet;
+            el('height-in').value = inches;
+          }
+          const group = el('height-group');
+          group.dataset.exactCm = String(cm);
+          group.dataset.shown = heightShownNow();
+        }
+        clearError('weight');
+        clearError('height');
+      }
+
+      // ---------- Results ----------
+
+      function setPercent(name, pct) {
+        el(`${name}-pct`).textContent = `${pct}%`;
+        el(`${name}-bar-pct`).textContent = `${pct}%`;
+        el(`${name}-bar`).style.width = `${pct}%`;
       }
 
       function displayResults(results) {
-        document.getElementById('calories').textContent = results.calories.toLocaleString();
-        document.getElementById('protein-amount').textContent = `${results.protein.grams}g`;
-        document.getElementById('protein-pct').textContent = `${results.protein.pct}%`;
-        document.getElementById('carbs-amount').textContent = `${results.carbs.grams}g`;
-        document.getElementById('carbs-pct').textContent = `${results.carbs.pct}%`;
-        document.getElementById('fats-amount').textContent = `${results.fats.grams}g`;
-        document.getElementById('fats-pct').textContent = `${results.fats.pct}%`;
+        el('calories').textContent = results.calories.toLocaleString();
+        el('protein-amount').textContent = `${results.protein.grams}g`;
+        el('carbs-amount').textContent = `${results.carbs.grams}g`;
+        el('fats-amount').textContent = `${results.fats.grams}g`;
 
+        // Let the bars animate from their old width.
         setTimeout(() => {
-          document.getElementById('protein-bar').style.width = `${results.protein.pct}%`;
-          document.getElementById('protein-bar-pct').textContent = `${results.protein.pct}%`;
-          document.getElementById('carbs-bar').style.width = `${results.carbs.pct}%`;
-          document.getElementById('carbs-bar-pct').textContent = `${results.carbs.pct}%`;
-          document.getElementById('fats-bar').style.width = `${results.fats.pct}%`;
-          document.getElementById('fats-bar-pct').textContent = `${results.fats.pct}%`;
+          setPercent('protein', results.protein.pct);
+          setPercent('carbs', results.carbs.pct);
+          setPercent('fats', results.fats.pct);
         }, 100);
 
-        document.getElementById('results').classList.remove('hidden');
-        setTimeout(() => {
-          document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+        const notesBox = el('results-notes');
+        notesBox.textContent = '';
+        results.notes.forEach(text => {
+          const p = document.createElement('p');
+          p.className = 'notice';
+          p.textContent = text;
+          notesBox.appendChild(p);
+        });
+        const disclaimer = document.createElement('p');
+        disclaimer.textContent = 'These are estimates from a standard formula, not medical advice. Real needs can differ by a few hundred calories, so watch how your weight changes over 2 to 3 weeks and adjust.';
+        notesBox.appendChild(disclaimer);
+
+        el('results').classList.remove('hidden');
+        setTimeout(() => el('results').scrollIntoView({ behavior: 'smooth' }), 100);
       }
 
-      function toggleUnits(unit) {
-        currentUnit = unit;
-        document.querySelectorAll('.unit-btn').forEach(btn => {
-          btn.classList.toggle('active', btn.dataset.unit === unit);
+      // ---------- Form ----------
+
+      el('macroForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        clearAllErrors();
+
+        const age = readNumber(el('age'));
+        const gender = el('gender').value;
+        const weight = readNumber(el('weight'));
+        const feet = readNumber(el('height-ft'));
+        const inchesRaw = readNumber(el('height-in'));
+        const inches = inchesRaw === null ? 0 : inchesRaw;
+        const cm = readNumber(el('height-cm'));
+        const activity = el('activity').value;
+        const goal = el('goal').value;
+
+        const problems = {
+          age: checkAge(age),
+          gender: gender ? '' : 'Please select a gender',
+          weight: checkWeight(weight, currentUnit),
+          height: checkHeight(feet, inches, cm, currentUnit),
+          activity: activity ? '' : 'Please select your activity level',
+          goal: checkGoal(goal, age)
+        };
+
+        let firstProblem = null;
+        Object.keys(problems).forEach(field => {
+          if (problems[field]) {
+            showError(field, problems[field]);
+            if (!firstProblem) firstProblem = field;
+          }
         });
 
-        const heightImp = document.getElementById('height-imperial');
-        const heightMet = document.getElementById('height-metric');
-        const weightUnit = document.getElementById('weight-unit');
-        const weightHint = document.getElementById('weight-hint');
-        const weightInput = document.getElementById('weight');
-
-        if (unit === 'imperial') {
-          heightImp.classList.remove('hidden');
-          heightMet.classList.add('hidden');
-          weightUnit.textContent = 'lbs';
-          weightHint.textContent = '50-500 lbs';
-          if (weightInput.value) {
-            weightInput.value = Math.round(convert.kgToLbs(parseFloat(weightInput.value)));
-          }
-        } else {
-          heightImp.classList.add('hidden');
-          heightMet.classList.remove('hidden');
-          weightUnit.textContent = 'kg';
-          weightHint.textContent = '23-227 kg';
-          if (weightInput.value) {
-            weightInput.value = Math.round(convert.lbsToKg(parseFloat(weightInput.value)));
-          }
+        if (firstProblem) {
+          el(`${firstProblem}-error`).closest('.form-group').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
         }
-      }
 
-      function copyToClipboard() {
-        if (!calculationResults) return;
-        const text = `MY MACRO PLAN
+        calculationResults = calculate({
+          age: age,
+          gender: gender,
+          weightKg: weightInKg(),
+          heightCm: heightInCm(),
+          activity: Number(activity),
+          goal: goal
+        });
+        displayResults(calculationResults);
+      });
+
+      document.querySelectorAll('.unit-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchUnits(btn.dataset.unit));
+      });
+
+      document.querySelectorAll('.goal-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.goal-btn').forEach(b => {
+            b.classList.remove('selected');
+            b.setAttribute('aria-pressed', 'false');
+          });
+          this.classList.add('selected');
+          this.setAttribute('aria-pressed', 'true');
+          el('goal').value = this.dataset.goal;
+          clearError('goal');
+        });
+      });
+
+      document.querySelectorAll('input, select').forEach(input => {
+        const eventName = input.tagName === 'SELECT' ? 'change' : 'input';
+        input.addEventListener(eventName, () => {
+          clearError(input.id.startsWith('height-') ? 'height' : input.id);
+        });
+      });
+
+      // ---------- Copy ----------
+
+      function copyText() {
+        return `MY MACRO PLAN
 
 Daily Calories: ${calculationResults.calories}
 
@@ -1063,9 +1276,13 @@ MACROS:
 🥩 Protein: ${calculationResults.protein.grams}g (${calculationResults.protein.pct}%)
 🍚 Carbs: ${calculationResults.carbs.grams}g (${calculationResults.carbs.pct}%)
 🥑 Fats: ${calculationResults.fats.grams}g (${calculationResults.fats.pct}%)`;
+      }
 
+      function copyToClipboard() {
+        if (!calculationResults) return;
+        const text = copyText();
         if (navigator.clipboard) {
-          navigator.clipboard.writeText(text).then(() => showToast()).catch(() => copyFallback(text));
+          navigator.clipboard.writeText(text).then(() => showToast('✓ Copied to clipboard!')).catch(() => copyFallback(text));
         } else {
           copyFallback(text);
         }
@@ -1080,151 +1297,122 @@ MACROS:
         textarea.select();
         try {
           document.execCommand('copy');
-          showToast();
+          showToast('✓ Copied to clipboard!');
         } catch (err) {
-          console.error('Copy failed', err);
+          showToast('Could not copy. Please select the numbers and copy them by hand.');
         }
         document.body.removeChild(textarea);
       }
 
-      function showToast() {
-        const toast = document.getElementById('toast');
-        toast.classList.remove('hidden');
-        setTimeout(() => toast.classList.add('hidden'), 2000);
-      }
-
-      // Event Handlers
-      document.getElementById('macroForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        clearAllErrors();
-
-        const data = {
-          age: document.getElementById('age').value,
-          gender: document.getElementById('gender').value,
-          weight: parseFloat(document.getElementById('weight').value),
-          heightFt: parseInt(document.getElementById('height-ft').value),
-        heightIn: parseInt(document.getElementById('height-in').value || '0'),
-
-          heightCm: parseInt(document.getElementById('height-cm').value),
-          activity: document.getElementById('activity').value,
-          goal: document.getElementById('goal').value,
-          unit: currentUnit
-        };
-
-        let isValid = true;
-        const checks = [
-          { field: 'age', validator: validate.age(data.age) },
-          { field: 'gender', validator: validate.gender(data.gender) },
-          { field: 'weight', validator: validate.weight(data.weight, data.unit) },
-          { field: 'height', validator: validate.height(data.heightFt, data.heightIn, data.heightCm, data.unit) },
-          { field: 'activity', validator: validate.activity(data.activity) },
-          { field: 'goal', validator: validate.goal(data.goal) }
-        ];
-
-        checks.forEach(check => {
-          if (!check.validator.valid) {
-            showError(check.field, check.validator.msg);
-            isValid = false;
-          }
-        });
-
-        if (!isValid) {
-          document.querySelector('.error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          return;
-        }
-
-        calculationResults = calculate(data);
-        displayResults(calculationResults);
-      });
-
-      document.querySelectorAll('.unit-btn').forEach(btn => {
-        btn.addEventListener('click', () => toggleUnits(btn.dataset.unit));
-      });
-
-      document.querySelectorAll('.goal-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-          document.querySelectorAll('.goal-btn').forEach(b => b.classList.remove('selected'));
-          this.classList.add('selected');
-          document.getElementById('goal').value = this.dataset.goal;
-          clearError('goal');
-        });
-      });
-
-      // Save Results Functions
-      function saveResults() {
-        if (!calculationResults) return;
-
-        const savedData = JSON.parse(localStorage.getItem('macroHistory') || '[]');
-        const newEntry = {
-          date: new Date().toLocaleString(),
-          timestamp: Date.now(),
-          ...calculationResults
-        };
-
-        savedData.unshift(newEntry); // Add to beginning
-        if (savedData.length > 10) savedData.pop(); // Keep last 10
-
-        localStorage.setItem('macroHistory', JSON.stringify(savedData));
-        loadSavedResults();
-        showToast('Results saved!');
-      }
-
-      function loadSavedResults() {
-        const savedData = JSON.parse(localStorage.getItem('macroHistory') || '[]');
-        const container = document.getElementById('savedResultsList');
-        const savedSection = document.getElementById('savedResults');
-
-        if (savedData.length === 0) {
-          savedSection.classList.add('hidden');
-          return;
-        }
-
-        savedSection.classList.remove('hidden');
-        container.innerHTML = savedData.map(item => `
-          <div class="saved-item">
-            <div class="saved-item-date">${item.date}</div>
-            <div class="saved-item-calories">${item.calories.toLocaleString()} cal/day</div>
-            <div class="saved-item-macros">
-              <div class="saved-item-macro">🥩 ${item.protein.grams}g</div>
-              <div class="saved-item-macro">🍚 ${item.carbs.grams}g</div>
-              <div class="saved-item-macro">🥑 ${item.fats.grams}g</div>
-            </div>
-          </div>
-        `).join('');
-      }
-
-      function clearHistory() {
-        if (confirm('Clear all saved results?')) {
-          localStorage.removeItem('macroHistory');
-          loadSavedResults();
-          showToast('History cleared!');
-        }
-      }
-
-      function showToast(message = '✓ Copied to clipboard!') {
-        const toast = document.getElementById('toast');
+      function showToast(message) {
+        const toast = el('toast');
         toast.textContent = message;
         toast.classList.remove('hidden');
         setTimeout(() => toast.classList.add('hidden'), 2000);
       }
 
-      document.getElementById('copyBtn')?.addEventListener('click', copyToClipboard);
-      document.getElementById('saveBtn')?.addEventListener('click', saveResults);
-      document.getElementById('clearHistoryBtn')?.addEventListener('click', clearHistory);
+      // ---------- Saved results ----------
+      // Storage can be full, blocked (private browsing) or hold old or broken data,
+      // so every read and write is guarded and bad entries are skipped.
 
-      document.getElementById('recalcBtn')?.addEventListener('click', () => {
-        document.getElementById('macroForm').scrollIntoView({ behavior: 'smooth' });
-      });
+      const HISTORY_KEY = 'macroHistory';
 
-      document.querySelectorAll('input, select').forEach(input => {
-        input.addEventListener('input', () => {
-          const id = input.id.includes('height-') ? 'height' : input.id;
-          clearError(id);
+      function isValidEntry(item) {
+        return Boolean(item) && typeof item.date === 'string' && typeof item.calories === 'number' &&
+          Boolean(item.protein && item.carbs && item.fats) &&
+          typeof item.protein.grams === 'number' && typeof item.carbs.grams === 'number' &&
+          typeof item.fats.grams === 'number';
+      }
+
+      function readHistory() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+          return Array.isArray(parsed) ? parsed.filter(isValidEntry) : [];
+        } catch (err) {
+          return [];
+        }
+      }
+
+      function writeHistory(entries) {
+        try {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(entries));
+          return true;
+        } catch (err) {
+          return false;
+        }
+      }
+
+      function saveResults() {
+        if (!calculationResults) return;
+        const entries = readHistory();
+        entries.unshift({
+          date: new Date().toLocaleString(),
+          timestamp: Date.now(),
+          calories: calculationResults.calories,
+          protein: calculationResults.protein,
+          carbs: calculationResults.carbs,
+          fats: calculationResults.fats
         });
+        if (writeHistory(entries.slice(0, 10))) {
+          loadSavedResults();
+          showToast('Results saved!');
+        } else {
+          showToast('Could not save. Your browser is blocking storage.');
+        }
+      }
+
+      function savedItem(item) {
+        const box = document.createElement('div');
+        box.className = 'saved-item';
+
+        const date = document.createElement('div');
+        date.className = 'saved-item-date';
+        date.textContent = item.date;
+
+        const calories = document.createElement('div');
+        calories.className = 'saved-item-calories';
+        calories.textContent = `${item.calories.toLocaleString()} cal/day`;
+
+        const macros = document.createElement('div');
+        macros.className = 'saved-item-macros';
+        [['🥩', item.protein.grams], ['🍚', item.carbs.grams], ['🥑', item.fats.grams]].forEach(([icon, grams]) => {
+          const macro = document.createElement('div');
+          macro.className = 'saved-item-macro';
+          macro.textContent = `${icon} ${grams}g`;
+          macros.appendChild(macro);
+        });
+
+        box.append(date, calories, macros);
+        return box;
+      }
+
+      function loadSavedResults() {
+        const entries = readHistory();
+        const list = el('savedResultsList');
+        list.textContent = '';
+        el('savedResults').classList.toggle('hidden', entries.length === 0);
+        entries.forEach(item => list.appendChild(savedItem(item)));
+      }
+
+      function clearHistory() {
+        if (confirm('Clear all saved results?')) {
+          try { localStorage.removeItem(HISTORY_KEY); } catch (err) { /* nothing saved to clear */ }
+          loadSavedResults();
+          showToast('History cleared!');
+        }
+      }
+
+      el('copyBtn').addEventListener('click', copyToClipboard);
+      el('saveBtn').addEventListener('click', saveResults);
+      el('clearHistoryBtn').addEventListener('click', clearHistory);
+      el('recalcBtn').addEventListener('click', () => {
+        el('macroForm').scrollIntoView({ behavior: 'smooth' });
       });
 
-      toggleUnits('imperial');
-      loadSavedResults(); // Load saved results on page load
+      // Only show the right fields at start. Do not convert: some browsers restore typed
+      // values on reload, and converting those would turn 150 lbs into 331.
+      showUnitFields(currentUnit);
+      loadSavedResults();
     })();
   </script>
 
