@@ -16,7 +16,11 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 // Space between segments so each one reads on its own, drawn in the card's colour.
 const GAP = 4
 
-/** Ring of calories by macro with the daily total in the middle. Hovering a segment or a row shows that macro in the middle. */
+/**
+ * Ring of calories by macro with the daily total in the middle. Hovering a segment or a row
+ * highlights the pair. The middle always shows calories: on a phone the ring often appears
+ * under the finger that just tapped, and a stuck hover would hide the total.
+ */
 export function MacroRing({ plan }: { plan: MacroPlan }) {
   const [active, setActive] = useState<MacroKey | null>(null)
 
@@ -28,8 +32,6 @@ export function MacroRing({ plan }: { plan: MacroPlan }) {
     offset += share * CIRCUMFERENCE
     return segment
   })
-
-  const activeMacro = active ? MACROS.find(m => m.key === active) : null
 
   return (
     <div className="ring-layout">
@@ -60,19 +62,10 @@ export function MacroRing({ plan }: { plan: MacroPlan }) {
           </g>
         </svg>
         <div className="ring-center" aria-hidden="true">
-          {activeMacro ? (
-            <>
-              <span className="ring-number">{plan[activeMacro.key].grams}g</span>
-              <span className="ring-unit">{activeMacro.label.toLowerCase()}</span>
-            </>
-          ) : (
-            <>
-              <span className="ring-number" data-testid="calories">
-                {plan.calories.toLocaleString('en-US')}
-              </span>
-              <span className="ring-unit">calories / day</span>
-            </>
-          )}
+          <span className="ring-number" data-testid="calories">
+            {plan.calories.toLocaleString('en-US')}
+          </span>
+          <span className="ring-unit">calories / day</span>
         </div>
       </div>
 

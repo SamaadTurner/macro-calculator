@@ -89,7 +89,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <a className="brand" href="./" aria-label="Macro Calculator home">
+        <a className="brand" href="./">
           <svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true">
             <defs>
               <linearGradient id="brand-grad" x1="0" y1="0" x2="1" y2="1">
