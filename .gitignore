@@ -1,17 +1,6 @@
-# OS Files
-.DS_Store
-Thumbs.db
-
-# Editor Files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Logs
+node_modules/
+dist/
+playwright-report/
+test-results/
 *.log
-
-# Temporary Files
-*.tmp
-*.temp
+.DS_Store
