@@ -32,6 +32,15 @@ returning visitor lands straight on their results.
   suggests new targets. See below.
 - Export the log as a JSON backup and import it on another device. Days in the backup replace
   the same days on the device; anything unreadable is skipped and counted.
+- Import daily totals from another app's CSV export (Cronometer's daily nutrition or biometrics
+  export, MyFitnessPal's nutrition or measurement summary, or a spreadsheet). The columns are
+  guessed from common header names (Date or Day; Energy (kcal) or Calories; Protein, Carbs or
+  Carbohydrates, Fat; Weight) and shown as dropdowns to check or change before anything is
+  saved, with a preview of the days. Rows on the same day are added up (one row per meal
+  becomes the day's total), a file with one measurement per row (Day, Metric, Unit, Amount)
+  is read for body weight only in each row's unit, and a Completed column set to false
+  imports the day as not complete. Imported food replaces that day's food and keeps its
+  weigh-in, and the other way round.
 - Light and dark themes in warm gym colours (cream walls, wood, black iron), following the
   phone's setting.
 
@@ -234,7 +243,7 @@ src/
   engine/       the math, no React: checks, unit conversion, energy per kg, the plan
   form.ts       form state, unit switching, which step is complete
   storage.ts    local storage, guarded against blocked or broken data
-  log/          the daily log: dates, entries, form checks, trend, backup files
+  log/          the daily log: dates, entries, form checks, trend, backup files, CSV import
   coach/        the weekly check-in: the expenditure estimate and saved check-ins
   components/   the steps, the results page, the ring, the log and check-in pages and the weight chart
 sim/            the simulation study: body model, simulated people, settings search
@@ -243,18 +252,19 @@ e2e/            Playwright tests, including axe accessibility scans
 
 ## Tests
 
-- **136 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the log
+- **147 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, CSV import (quoting, meal rows, a Completed column, per-measurement weights, date orders, merging), the log
   (dates across month ends and daylight saving, the trend after gaps, backup files), the chart, and the check-in (hand-worked
   energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 35-day window, the weekly limit, forgotten-meal days, ticked days, fasting
   days, patchy logs, splitting at gaps) and the
   simulation (seeded random numbers, energy balance, the water drop, holidays, gaps and forgotten meals, ticks and rough guesses, repeatable results). Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
-- **48 end-to-end tests** (Playwright) on a desktop and a touch phone screen (94 runs; one
+- **52 end-to-end tests** (Playwright) on a desktop and a touch phone screen (102 runs; one
   test is mouse-only and one is touch-only), against the production build. They cover the full flow in both unit systems, every error message, unit
   switching, the goal pace, the calorie floor (and that it never goes above maintenance), the under-18 rule, pill rows on a 320 px phone, saved plans, returning visitors, broken saved
   data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, logging,
-  editing and deleting days, the not-complete tick, backup export and import, the chart with the keyboard, the check-in (exact numbers checked
+  editing and deleting days, the not-complete tick, backup export and import, CSV import (meal rows into daily totals, a per-measurement weight file, a
+  bad file, cancel), the chart with the keyboard, the check-in (exact numbers checked
   against a separate Python version, saving, the weekly limit, a forgotten-meal day, a ticked day, a patchy log, the link from the Plan tab, three tabs on a 320 px phone), and an
   [axe](https://github.com/dequelabs/axe-core) scan for WCAG 2.1 A and AA rules on every step,
   with and without errors showing, in light and dark mode.
@@ -294,12 +304,16 @@ npm run dev            # http://localhost:5173/macro-calculator/
 - The log is kept in this browser's local storage (a few hundred bytes a day, so years fit
   well under the browser's limit). Clearing site data deletes it, which is why there is an
   export button. There is no account or sync.
+- The CSV import was tested on sample files laid out from public descriptions of the
+  Cronometer and MyFitnessPal exports, not on real exports, whose exact headers could not be
+  confirmed. A file whose columns are not guessed can still be imported by picking them in the
+  dropdowns. Imports must be one file at a time (food and weight files one after the other).
 - `npm audit` reports moderate advisories in development-only packages (the Vite dev server and
   Vitest). None of that code is in the built site.
 
 ## Planned
 
-Importing daily totals from Cronometer and MyFitnessPal, and an installable offline app.
+An installable offline app.
 
 ## License
 
