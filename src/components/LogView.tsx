@@ -11,6 +11,7 @@ import { trendChange, weightTrend } from '../log/trend'
 import { backupText, MAX_BACKUP_BYTES, mergeBackup, readBackup } from '../log/backup'
 import { Choice, FieldError, NumberField } from './fields'
 import { WeightChart } from './WeightChart'
+import { CsvImport } from './CsvImport'
 import { TrashIcon } from './Icons'
 
 const UNIT_OPTIONS = [
@@ -319,6 +320,8 @@ export function LogView({ unit, onUnitChange, showToast }: LogViewProps) {
           ) : null}
         </div>
       ) : null}
+
+      <CsvImport entries={entries} unit={unit} persist={persist} showToast={showToast} />
 
       <div className="card">
         <h2 className="card-title">Backup</h2>

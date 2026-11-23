@@ -393,6 +393,70 @@ a {
   font-size: 0.8125rem;
 }
 
+/* CSV import: the column pickers sit two to a row, one on a narrow phone. */
+.column-picks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+@media (max-width: 380px) {
+  .column-picks {
+    grid-template-columns: 1fr;
+  }
+}
+
+.select-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 52px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.select-input:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--focus-ring);
+}
+
+.select-input select {
+  width: 100%;
+  height: 100%;
+  padding: 0 14px;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.select-input select option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.preview-days {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preview-days li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.9375rem;
+}
+
+.preview-days li span:first-child {
+  font-weight: 600;
+}
+
 /* A single tick box with its label beside it and a hint underneath. */
 .check-field {
   display: grid;
