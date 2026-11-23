@@ -10,6 +10,8 @@ export interface Person {
   heightCm: number
   activity: number
   goal: Goal
+  /** Share of body weight to lose or gain per week, like 0.005. Missing means the default for the goal. */
+  pace?: number
 }
 
 export interface Macro {
@@ -29,6 +31,10 @@ export interface MacroPlan {
     activity: number
     maintenance: number
     adjustment: number
+    /** The pace that was used, as a share of body weight per week. */
+    pace: number
+    /** Expected change in body weight per week at the final target, negative for loss. */
+    weeklyChangeKg: number
     proteinPerKg: number
     referenceWeightKg: number
   }

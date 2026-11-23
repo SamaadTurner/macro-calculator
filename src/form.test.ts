@@ -101,3 +101,14 @@ describe('toPerson', () => {
     expect(weightInKg(form)).toBeCloseTo(81.6466, 3)
   })
 })
+
+describe('pace', () => {
+  it('starts each new goal from its default pace', () => {
+    let form = formReducer(emptyForm, { type: 'set', field: 'goal', value: 'cutting' })
+    form = formReducer(form, { type: 'set', field: 'pace', value: 0.01 })
+    expect(form.pace).toBe(0.01)
+    // Picking the same goal again keeps the pace.
+    expect(formReducer(form, { type: 'set', field: 'goal', value: 'cutting' }).pace).toBe(0.01)
+    expect(formReducer(form, { type: 'set', field: 'goal', value: 'bulking' }).pace).toBeNull()
+  })
+})

@@ -12,7 +12,7 @@ beforeEach(() => {
 
 describe('form storage', () => {
   it('round-trips the form', () => {
-    const form = { ...emptyForm, sex: 'female' as const, age: '28', weight: '140', activity: 1.375 }
+    const form = { ...emptyForm, sex: 'female' as const, age: '28', weight: '140', activity: 1.375, goal: 'cutting' as const, pace: 0.0075 }
     saveForm(form)
     expect(loadForm()).toEqual(form)
   })

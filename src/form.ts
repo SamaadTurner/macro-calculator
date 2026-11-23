@@ -13,6 +13,8 @@ export interface FormState {
   heightCm: string
   activity: number | null
   goal: Goal | ''
+  /** Chosen pace for the goal, or null for the default. */
+  pace: number | null
   // After a unit switch the boxes show rounded numbers. The exact metric values are kept
   // here until the user edits the box, so switching back and forth never drifts.
   exactWeightKg: number | null
@@ -29,6 +31,7 @@ export const emptyForm: FormState = {
   heightCm: '',
   activity: null,
   goal: '',
+  pace: null,
   exactWeightKg: null,
   exactHeightCm: null,
 }
@@ -37,6 +40,7 @@ export type FormAction =
   | { type: 'set'; field: 'sex'; value: Sex }
   | { type: 'set'; field: 'goal'; value: Goal }
   | { type: 'set'; field: 'activity'; value: number }
+  | { type: 'set'; field: 'pace'; value: number }
   | { type: 'set'; field: 'age' | 'weight' | 'heightFt' | 'heightIn' | 'heightCm'; value: string }
   | { type: 'switchUnit'; unit: UnitSystem }
   | { type: 'load'; form: FormState }
@@ -88,6 +92,8 @@ export function formReducer(form: FormState, action: FormAction): FormState {
   switch (action.type) {
     case 'set': {
       const next = { ...form, [action.field]: action.value }
+      // Each goal has its own paces, so a new goal starts from its default pace.
+      if (action.field === 'goal' && action.value !== form.goal) next.pace = null
       // Typing in a box means the user's number wins over the remembered exact value.
       if (action.field === 'weight') next.exactWeightKg = null
       if (action.field === 'heightFt' || action.field === 'heightIn' || action.field === 'heightCm') next.exactHeightCm = null
@@ -153,5 +159,6 @@ export function toPerson(form: FormState): Person | null {
     heightCm,
     activity: form.activity,
     goal: form.goal,
+    pace: form.pace ?? undefined,
   }
 }

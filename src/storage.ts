@@ -50,6 +50,8 @@ export function loadForm(): FormState | null {
   if (saved.sex === 'male' || saved.sex === 'female' || saved.sex === 'other') form.sex = saved.sex
   if (saved.goal === 'cutting' || saved.goal === 'maintain' || saved.goal === 'bulking') form.goal = saved.goal
   if (isFiniteNumber(saved.activity)) form.activity = saved.activity
+  // The engine ignores a pace it does not offer, so any number is safe to keep here.
+  if (isFiniteNumber(saved.pace)) form.pace = saved.pace
   for (const field of ['age', 'weight', 'heightFt', 'heightIn', 'heightCm'] as const) {
     if (typeof saved[field] === 'string') form[field] = saved[field] as string
   }
