@@ -1391,3 +1391,120 @@ a {
     scroll-behavior: auto !important;
   }
 }
+
+/* Weekly check-in */
+@media (max-width: 420px) {
+  /* Three tabs and the full name do not fit on a small phone; the ring mark stays. */
+  .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .tab {
+    padding: 0 12px;
+  }
+}
+
+.checkin-status {
+  margin: 0 0 16px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.big-number {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 2.5rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.big-unit {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.macro-line {
+  margin: 4px 0 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.share-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.share-data {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.checklist {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.checklist li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.checklist-mark {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  font-weight: 800;
+  font-size: 0.875rem;
+}
+
+.checklist li.is-done .checklist-mark {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-primary);
+}
+
+.checklist-label {
+  flex: 1;
+}
+
+.checklist-count {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+a.btn {
+  text-decoration: none;
+}
+
+.checkin-breakdown dd {
+  white-space: nowrap;
+}
+
+.checkin-table td.food small {
+  white-space: normal;
+}

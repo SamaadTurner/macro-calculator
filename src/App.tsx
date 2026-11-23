@@ -9,12 +9,13 @@ import type { SavedPlan } from './storage'
 import { Wizard } from './components/Wizard'
 import { planAsText, Results } from './components/Results'
 import { LogView } from './components/LogView'
+import { CheckInView } from './components/CheckInView'
 
 type View = { name: 'steps'; step: number } | { name: 'results' }
-type Tab = 'plan' | 'log'
+type Tab = 'plan' | 'log' | 'checkin'
 
-// The tab lives in the address (#log) so a reload or a home screen bookmark opens the same tab.
-const tabFromHash = (): Tab => (window.location.hash === '#log' ? 'log' : 'plan')
+// The tab lives in the address (#log, #checkin) so a reload or a home screen bookmark opens the same tab.
+const tabFromHash = (): Tab => (window.location.hash === '#log' ? 'log' : window.location.hash === '#checkin' ? 'checkin' : 'plan')
 
 export default function App() {
   // Returning visitors see their last answers; if those are complete, they land on their results.
@@ -117,11 +118,16 @@ export default function App() {
           <a className="tab" href="#log" aria-current={tab === 'log' ? 'page' : undefined}>
             Log
           </a>
+          <a className="tab" href="#checkin" aria-current={tab === 'checkin' ? 'page' : undefined}>
+            Check-in
+          </a>
         </nav>
       </header>
 
       <main className="shell">
-        {tab === 'log' ? (
+        {tab === 'checkin' ? (
+          <CheckInView person={person} planCalories={plan?.calories ?? null} unit={form.unit} showToast={showToast} />
+        ) : tab === 'log' ? (
           <LogView unit={form.unit} onUnitChange={unit => dispatch({ type: 'switchUnit', unit })} showToast={showToast} />
         ) : showingResults ? (
           <Results
