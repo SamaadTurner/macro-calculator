@@ -50,10 +50,11 @@ returning visitor lands straight on their results.
      ([Helms et al. 2014](https://pmc.ncbi.nlm.nih.gov/articles/PMC4033492)).
    - Build muscle: 0.15%, 0.25% (default) or 0.5%. Newer lifters can gain faster; experienced
      ones should go slower ([Iraki et al. 2019](https://pmc.ncbi.nlm.nih.gov/articles/PMC6680710)).
-   - The pace becomes calories at 7,700 calories per kg of body weight, the simple rule Hall
-     found fits weight change over months reasonably well
-     ([Hall 2008](https://pmc.ncbi.nlm.nih.gov/articles/PMC2376744)). The first weeks of a diet
-     lose more water, so the scale moves faster at first.
+   - The pace becomes calories with the energy in a kg of weight change for your body (see
+     step 3 of the check-in below; about 6,620 calories per kg for a 180 lb, 5 ft 10 in man),
+     not the flat 7,700 rule: leaner people lose more lean tissue per kg, so each kg holds fewer
+     calories ([Hall 2008](https://pmc.ncbi.nlm.nih.gov/articles/PMC2376744)). The first weeks
+     of a diet lose more water, so the scale moves faster at first.
    - The deficit is capped at 25% of maintenance and the surplus at 20%, and the results say
      when a cap applies. The results show the expected change in lb or kg per week.
 4. **Calorie floor, fat loss only:** not below 1,200 (women), 1,500 (men) or 1,350 (other). This
@@ -74,16 +75,17 @@ built from adults. These are estimates: real energy needs can be a few hundred c
 from any formula, which is why the results suggest checking your weight trend after 2 to 3
 weeks.
 
-The math was checked against a separate version written from the papers on 3,375 combinations
-of sex, age, weight, height, activity and goal; the unit tests keep worked examples from that
-check and run 9,000 combinations (every pace included) on every push.
+The math was checked against a separate version written from the papers on 9,000 combinations
+of sex, age, weight, height, activity, goal and pace (calories, every macro and the weekly
+change all match); the unit tests keep worked examples from that check and run the same 9,000
+combinations on every push.
 
 ## The weekly check-in
 
 The formula above is a starting guess, and for about one person in four it is off by more than
 10%. After about two weeks of logging, the check-in works out your real maintenance from the log:
 
-1. **Weight change:** a least-squares line through the weigh-ins of the last 28 days. Missed
+1. **Weight change:** a least-squares line through the weigh-ins of the last 35 days. Missed
    weigh-ins need no filling in; the line spans them.
 2. **Calories eaten:** the average of the days with calories logged between the first and the
    last weigh-in (food on the day of the last weigh-in shows up on the scale the next day, so it
@@ -100,9 +102,11 @@ The formula above is a starting guess, and for about one person in four it is of
 4. **Burn from the log** = average calories eaten − weight change per day × energy per kg.
 5. **Mixed with the formula** by how certain each one is (inverse-variance weighting): the
    formula is taken as ±15%, the log's uncertainty comes from the scatter of the weigh-ins
-   around the line (at least 0.4 kg a day) and of the logged calories. A short or noisy log
-   leans on the formula; with four weeks of daily data the log does almost all of the work. The
-   page shows the split and a likely range.
+   around the line (at least 0.4 kg a day) and of the logged calories. Scale water carries over
+   from one day to the next, so the weigh-ins are not independent; the line's uncertainty is
+   multiplied by 1.73, the usual correction for a day-to-day carry-over of about 0.5. A short or
+   noisy log leans on the formula; with four weeks of daily data the log does most of the work.
+   The page shows the split and a likely range.
 6. **Weekly limit:** between saved check-ins the estimate moves at most 200 calories a week, so
    one odd week does not swing the targets.
 
@@ -110,7 +114,65 @@ The suggested targets then use the same rules as the plan (pace, caps, the floor
 split), with the measured maintenance and the energy per kg above. The first estimate needs 5
 weigh-ins spread over at least 10 days and 7 days with calories. The page says when the log is
 far (35%) from the formula and suggests checking the logging. Check-ins are saved on the device
-with a history.
+with a history, and the Plan tab shows the latest one above the formula numbers.
+
+## How accurate the check-in is (simulation study)
+
+There is no public dataset of daily weights and logged calories with a measured true
+expenditure, so the check-in was tested on simulated people whose true expenditure is known
+([`sim/`](sim), run with `npm run simulate`, full tables in [`sim/RESULTS.md`](sim/RESULTS.md)).
+
+**The model.** 2,000 adults (18 to 65, BMI 19 to 36, a mix of activity levels and goals) each
+log for six weeks while eating their formula plan. Their bodies follow a simple version of
+Hall's energy balance model: fat and lean change by Forbes' curve, and expenditure follows body
+size, the thermic effect of food (10% of a change in intake) and adaptive thermogenesis (14%,
+settling over 14 days) from [Hall et al. 2011](https://pubmed.ncbi.nlm.nih.gov/21872751/). Each
+person's real expenditure is off from the formula (resting energy ±8.5%, which fits Mifflin
+being within 10% for about 75% of people; activity ±10%, an assumption), and their body fat is
+off from Deurenberg's estimate by its published 4.1 points. On top of that, the things that
+make a real log messy:
+
+- a glycogen and water drop of up to 1.5 kg in the first days of a diet (an assumption sized to
+  the drop people see),
+- scale noise of 0.3 to 0.8% of body weight that carries over between days, a small weekend
+  bump, and a menstrual cycle swing of 0.3 to 1 kg for women under 50,
+- eating 10 to 25% more or less than planned on any day, and leaving 0 to 30% of food out of
+  the log (self-reports usually run low:
+  [Hill and Davies 2001](https://pubmed.ncbi.nlm.nih.gov/11348556/)),
+- missing up to 40% of weigh-ins and up to 30% of food logs.
+
+**The truth** at each weekly check-in is what the person really burned over the last 7 days,
+counted in the calories they log (someone who logs 80% of what they eat needs targets in those
+logged calories). The settings were tuned on a different random seed
+([`sim/TUNING.md`](sim/TUNING.md)) from the one reported here.
+
+Median error in calories a day, and the share of people within 10% of the truth:
+
+| | Week 1 | Week 2 | Week 3 | Week 4 | Week 6 |
+|---|---|---|---|---|---|
+| Formula | 341 (28%) | 333 (29%) | 334 (29%) | 334 (29%) | 326 (29%) |
+| Check-in | 341 (28%) | 182 (52%) | 143 (62%) | **119 (73%)** | **74 (89%)** |
+| Formula, if everyone logged everything | 174 (61%) | 167 (63%) | 164 (63%) | 164 (64%) | 161 (64%) |
+| Check-in, if everyone logged everything | 174 (61%) | 152 (67%) | 128 (74%) | 104 (85%) | 60 (97%) |
+
+Week 1 has too little data, so the check-in shows the formula. What else the study found:
+
+- **The energy per kg matters.** With a flat 7,700 calories per kg the week 4 error is 137
+  instead of 119, so the app uses the body-based value for both the check-in and the plan.
+- **The carry-over correction and the 35-day window help.** The first version (28 days, no
+  correction) had a week 4 error of 130 and a week 6 error of 89.
+- **The log alone is not enough early on.** Without the formula mix the week 2 error is 377,
+  worse than the formula, mostly because of the early water drop.
+- **It follows real change.** When everyone's burn rises 12% on day 21, the error jumps to 173
+  at week 4 and is back to 88 by week 6.
+- **The weekly limit costs almost nothing here** (119 vs 117 at week 4), but the simulation has
+  no holiday weeks or logging lapses, which is what the limit is for.
+- **It is not a measure of your metabolism.** Counted in real calories, an under-logger's
+  estimate is low by about the share they leave out. That is intended: their targets are
+  compared with their logged calories.
+
+These are simulated people: the results depend on the model's assumptions, which are listed
+above and in [`sim/study.ts`](sim/study.ts). No real-user results are claimed.
 
 ## Built with
 
@@ -122,20 +184,22 @@ from Google.
 
 ```
 src/
-  engine/       the math, no React: checks, unit conversion, the plan
+  engine/       the math, no React: checks, unit conversion, energy per kg, the plan
   form.ts       form state, unit switching, which step is complete
   storage.ts    local storage, guarded against blocked or broken data
   log/          the daily log: dates, entries, form checks, trend, backup files
-  coach/        the weekly check-in: energy per kg, the expenditure estimate, saved check-ins
+  coach/        the weekly check-in: the expenditure estimate and saved check-ins
   components/   the steps, the results page, the ring, the log and check-in pages and the weight chart
+sim/            the simulation study: body model, simulated people, settings search
 e2e/            Playwright tests, including axe accessibility scans
 ```
 
 ## Tests
 
-- **109 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the log
+- **121 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the log
   (dates across month ends and daylight saving, the trend after gaps, backup files), the chart, and the check-in (hand-worked
-  energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 28-day window, the weekly limit). Every bug
+  energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 35-day window, the weekly limit) and the
+  simulation (seeded random numbers, energy balance, the water drop, repeatable results). Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
 - **44 end-to-end tests** (Playwright) on a desktop and a touch phone screen (86 runs; one
@@ -143,7 +207,7 @@ e2e/            Playwright tests, including axe accessibility scans
   switching, the goal pace, the calorie floor (and that it never goes above maintenance), the under-18 rule, pill rows on a 320 px phone, saved plans, returning visitors, broken saved
   data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, logging,
   editing and deleting days, backup export and import, the chart with the keyboard, the check-in (exact numbers checked
-  against a separate Python version, saving, the weekly limit, three tabs on a 320 px phone), and an
+  against a separate Python version, saving, the weekly limit, the link from the Plan tab, three tabs on a 320 px phone), and an
   [axe](https://github.com/dequelabs/axe-core) scan for WCAG 2.1 A and AA rules on every step,
   with and without errors showing, in light and dark mode.
 
@@ -167,13 +231,14 @@ npm run dev            # http://localhost:5173/macro-calculator/
 | `npx playwright install chromium` then `npm run e2e` | End-to-end tests (builds the site first) |
 | `npm run lint` / `npm run typecheck` | ESLint / TypeScript |
 | `npm run build` | Production build in `dist/` |
+| `npm run simulate` | The simulation study (writes `sim/RESULTS.md`, about 15 seconds) |
+| `npm run simulate:tune` | The settings search on a separate seed (writes `sim/TUNING.md`; `CHANGE=1` for the burn-change scenario) |
 
 ## Known limits
 
-- The Plan tab shows the formula; the measured targets are on the Check-in tab. The plan turns
-  the pace into calories with the simple 7,700 per kg rule, the check-in with the energy per kg
-  for your body, so the two can differ by a few dozen calories at the same maintenance.
-- How accurate the check-in is has not been measured yet; a simulation study is next.
+- The Plan tab shows the formula; the measured targets are on the Check-in tab (the Plan tab
+  links to the latest one).
+- The check-in's accuracy is measured on simulated people only (see above), not real users.
 - The log is kept in this browser's local storage (a few hundred bytes a day, so years fit
   well under the browser's limit). Clearing site data deletes it, which is why there is an
   export button. There is no account or sync.
@@ -182,8 +247,7 @@ npm run dev            # http://localhost:5173/macro-calculator/
 
 ## Planned
 
-A simulation study of the check-in (how far off it is after 1, 2 and 4 weeks compared with the
-formula), importing daily totals from Cronometer and MyFitnessPal, and an installable offline app.
+Importing daily totals from Cronometer and MyFitnessPal, and an installable offline app.
 
 ## License
 
