@@ -165,8 +165,20 @@ Week 1 has too little data, so the check-in shows the formula. What else the stu
   worse than the formula, mostly because of the early water drop.
 - **It follows real change.** When everyone's burn rises 12% on day 21, the error jumps to 173
   at week 4 and is back to 88 by week 6.
-- **The weekly limit costs almost nothing here** (119 vs 117 at week 4), but the simulation has
-  no holiday weeks or logging lapses, which is what the limit is for.
+- **The weekly limit earns its place on messy logs.** A second run gives half the people a 3 to
+  7 day holiday (eating 20 to 50% more, few weigh-ins, little logged), most of them one or two
+  3 to 7 day gaps with no log while eating up to 20% more, and a forgotten meal on up to 15% of
+  normal days (all assumptions). Compared with no limit, the 200 a week limit cuts the worst
+  errors (90th percentile at week 4: 374 vs 403) and the check-ins that jump over 200 calories
+  more than the truth did (15% vs 19%). On clean logs it costs 2 calories at week 4. A tighter
+  100 limit does better on messy logs but worse on clean ones (week 4: 128 vs 119), and a real
+  300 calorie rise would take three weeks to show, so the app keeps 200. The settings search on
+  the separate seed ranks the limits in the same order
+  ([`sim/TUNING-MESSY.md`](sim/TUNING-MESSY.md)).
+- **Messy logs still read low.** With holidays, gaps and forgotten meals the week 6 error is 132
+  instead of 74, and the estimate is about 90 calories too low on average. The weight gained on
+  days that were not logged (or logged in part) is put down to the days that were. The check-in
+  does not yet spot gaps or part days; that is the next thing to fix.
 - **It is not a measure of your metabolism.** Counted in real calories, an under-logger's
   estimate is low by about the share they leave out. That is intended: their targets are
   compared with their logged calories.
@@ -196,10 +208,10 @@ e2e/            Playwright tests, including axe accessibility scans
 
 ## Tests
 
-- **121 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the log
+- **126 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the log
   (dates across month ends and daylight saving, the trend after gaps, backup files), the chart, and the check-in (hand-worked
   energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 35-day window, the weekly limit) and the
-  simulation (seeded random numbers, energy balance, the water drop, repeatable results). Every bug
+  simulation (seeded random numbers, energy balance, the water drop, holidays, gaps and forgotten meals, repeatable results). Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
 - **44 end-to-end tests** (Playwright) on a desktop and a touch phone screen (86 runs; one
@@ -232,13 +244,15 @@ npm run dev            # http://localhost:5173/macro-calculator/
 | `npm run lint` / `npm run typecheck` | ESLint / TypeScript |
 | `npm run build` | Production build in `dist/` |
 | `npm run simulate` | The simulation study (writes `sim/RESULTS.md`, about 15 seconds) |
-| `npm run simulate:tune` | The settings search on a separate seed (writes `sim/TUNING.md`; `CHANGE=1` for the burn-change scenario) |
+| `npm run simulate:tune` | The settings search on a separate seed (writes `sim/TUNING.md`; `CHANGE=1` for the burn-change scenario, `MESSY=1` for the weekly limit with holidays and gaps) |
 
 ## Known limits
 
 - The Plan tab shows the formula; the measured targets are on the Check-in tab (the Plan tab
   links to the latest one).
 - The check-in's accuracy is measured on simulated people only (see above), not real users.
+- Days with no food logged are left out of the check-in, but a gap where you ate more than
+  usual, or a day where a meal was not logged, still pulls the estimate low.
 - The log is kept in this browser's local storage (a few hundred bytes a day, so years fit
   well under the browser's limit). Clearing site data deletes it, which is why there is an
   export button. There is no account or sync.
@@ -247,7 +261,7 @@ npm run dev            # http://localhost:5173/macro-calculator/
 
 ## Planned
 
-Importing daily totals from Cronometer and MyFitnessPal, and an installable offline app.
+Spotting gaps and part-logged days in the check-in, importing daily totals from Cronometer and MyFitnessPal, and an installable offline app.
 
 ## License
 
