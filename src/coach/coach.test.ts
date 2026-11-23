@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { caloriesPerKgChange, estimateBodyFatPct, FAT_CALORIES_PER_KG, fatShareOfChange, LEAN_CALORIES_PER_KG } from '../engine/energy'
-import { estimateExpenditure, MAX_CHANGE_PER_WEEK, MIN_INTAKE_DAYS, MIN_SPAN_DAYS, MIN_WEIGH_INS } from './expenditure'
+import { DEFAULT_SETTINGS, estimateExpenditure, MAX_CHANGE_PER_WEEK, MIN_INTAKE_DAYS, MIN_SPAN_DAYS, MIN_WEIGH_INS } from './expenditure'
 import type { ExpenditureInput } from './expenditure'
 import { loadCheckIns, previousCheckIn, saveCheckIn } from './checkins'
 import type { CheckIn } from './checkins'
@@ -163,6 +163,59 @@ describe('expenditure estimate', () => {
     const result = estimateExpenditure(input(entries))
     if (result.status !== 'ready') throw new Error('expected an estimate')
     expect(result.unusual).toBe(true)
+  })
+
+  it('leaves out a day that looks like a forgotten meal', () => {
+    // Usual day 2,400; days 5 and 19 logged 1,100 (under half), day 12 logged 1,300 (over half, kept).
+    const calories = (day: number) => (day === 5 || day === 19 ? 1100 : day === 12 ? 1300 : 2400)
+    const result = estimateExpenditure(input(makeLog(28, () => 80, calories)))
+    if (result.status !== 'ready') throw new Error('expected an estimate')
+    expect(result.partDays).toEqual([addDays(TODAY, -22), addDays(TODAY, -8)])
+    expect(result.intakeDays).toBe(25)
+    expect(result.averageIntake).toBeCloseTo((24 * 2400 + 1300) / 25, 6)
+  })
+
+  it('keeps low days that are a regular pattern, like two fasting days a week', () => {
+    const calories = (day: number) => (day % 7 === 2 || day % 7 === 5 ? 600 : 2500)
+    const result = estimateExpenditure(input(makeLog(28, () => 80, calories)))
+    if (result.status !== 'ready') throw new Error('expected an estimate')
+    expect(result.partDays).toEqual([])
+    expect(result.intakeDays).toBe(27)
+  })
+
+  it('trusts a patchy log less than a full one', () => {
+    const weight = (day: number) => 82 - 0.07 * day + wobble(day)
+    const full = estimateExpenditure(input(makeLog(28, weight, () => 2000)))
+    // Same weigh-ins and the same 2,000 calories, but only every other day logged.
+    const patchy = estimateExpenditure(input(makeLog(28, weight, day => (day % 2 === 0 ? 2000 : undefined))))
+    if (full.status !== 'ready' || patchy.status !== 'ready') throw new Error('expected estimates')
+    expect(full.loggedShare).toBe(1)
+    expect(patchy.loggedShare).toBeCloseTo(14 / 27, 6)
+    expect(patchy.fromData).toBeCloseTo(full.fromData, 6)
+    // Calories never vary here, so the log's uncertainty is all in the line, which is the same for
+    // both; the patchy log's uncertainty is divided by the share logged (14 of 27 days).
+    const w = full.dataWeight
+    const share = 14 / 27
+    expect(patchy.dataWeight).toBeCloseTo(1 / (1 + (1 - w) / (w * share)), 6)
+    expect(patchy.dataWeight).toBeLessThan(w)
+    const patchyOff = estimateExpenditure(input(makeLog(28, weight, day => (day % 2 === 0 ? 2000 : undefined)), { settings: { ...DEFAULT_SETTINGS, coverageWeighting: false } }))
+    if (patchyOff.status !== 'ready') throw new Error('expected an estimate')
+    expect(patchyOff.dataWeight).toBeCloseTo(w, 6)
+  })
+
+  it('can split the log at gaps, though the app leaves that off', () => {
+    // Flat at 80 kg, a 5-day gap with no calories, then flat at 82 kg (the gap's food is unknown).
+    const weight = (day: number) => (day < 12 ? 80 : day > 16 ? 82 : undefined)
+    const calories = (day: number) => (day >= 12 && day <= 16 ? undefined : 2400)
+    const entries = makeLog(28, weight, calories)
+    const plain = estimateExpenditure(input(entries))
+    const split = estimateExpenditure(input(entries, { settings: { ...DEFAULT_SETTINGS, gapDays: 3 } }))
+    if (plain.status !== 'ready' || split.status !== 'ready') throw new Error('expected estimates')
+    expect(plain.gaps).toEqual([])
+    expect(plain.weeklyChangeKg).toBeGreaterThan(0.5)
+    expect(split.gaps).toEqual([[addDays(TODAY, -15), addDays(TODAY, -11)]])
+    expect(split.weeklyChangeKg).toBeCloseTo(0, 6)
+    expect(split.fromData).toBeCloseTo(2400, 6)
   })
 })
 

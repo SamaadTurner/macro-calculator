@@ -43,6 +43,26 @@ export const SLOPE_SE_FACTOR = 1.73
 export const MAX_CHANGE_PER_WEEK = 200
 /** A data estimate this far from the formula (as a share) gets a "check your logging" note. */
 export const UNUSUAL_SHARE = 0.35
+/**
+ * Off. A run of this many days with no calories would be a gap whose weight change is not
+ * counted, each stretch getting its own starting weight. The simulation study found it made
+ * the estimate worse: after a holiday the extra water comes off fast, and a fresh line through
+ * those days reads it as fat loss. Kept as a setting so the study can be rerun.
+ */
+export const GAP_DAYS = Infinity
+/**
+ * A logged day under half the usual (median) day looks like a forgotten meal and is left out of
+ * the average: what was eaten still shows on the scale, but the log does not have it.
+ */
+export const PART_DAY_SHARE = 0.5
+/** ...unless low days are this common, which looks like a pattern (fasting days) rather than forgotten meals. */
+export const PART_DAY_PATTERN_SHARE = 0.2
+/**
+ * Trust the log less when fewer of its days have calories: unlogged days are often the ones with
+ * more food (holidays, weekends away), so a patchy log tends to read low. The data's variance is
+ * divided by the share of days logged.
+ */
+export const COVERAGE_WEIGHTING = true
 
 /** The tuning numbers above in one object, so the simulation study can try other values. */
 export interface EstimatorSettings {
@@ -54,6 +74,10 @@ export interface EstimatorSettings {
   minWeightNoiseKg: number
   maxChangePerWeek: number
   slopeSeFactor: number
+  gapDays: number
+  partDayShare: number
+  /** Trust the log less when fewer of its days have calories. */
+  coverageWeighting: boolean
 }
 
 export const DEFAULT_SETTINGS: EstimatorSettings = {
@@ -65,6 +89,9 @@ export const DEFAULT_SETTINGS: EstimatorSettings = {
   minWeightNoiseKg: MIN_WEIGHT_NOISE_KG,
   maxChangePerWeek: MAX_CHANGE_PER_WEEK,
   slopeSeFactor: SLOPE_SE_FACTOR,
+  gapDays: GAP_DAYS,
+  partDayShare: PART_DAY_SHARE,
+  coverageWeighting: COVERAGE_WEIGHTING,
 }
 
 export interface ExpenditureInput {
@@ -111,6 +138,12 @@ export type ExpenditureResult =
       limited: boolean
       /** True when the log disagrees with the formula by a lot. */
       unusual: boolean
+      /** Gaps in the food log whose weight change was not counted, as [first, last] unlogged day. */
+      gaps: [string, string][]
+      /** Logged days that looked part-logged and were left out of the average. */
+      partDays: string[]
+      /** Share of the days between the first and last weigh-in that have calories logged. */
+      loggedShare: number
     }
 
 interface Line {
@@ -118,25 +151,52 @@ interface Line {
   slopeSe: number
 }
 
-/** Least-squares line through (day, weight). Missed weigh-ins need no filling: the line simply spans them. */
-function fitLine(days: number[], weights: number[], minNoiseKg: number): Line {
-  const n = days.length
-  const meanX = days.reduce((sum, x) => sum + x, 0) / n
-  const meanY = weights.reduce((sum, y) => sum + y, 0) / n
+/**
+ * Least-squares line through (day, weight). Missed weigh-ins need no filling: the line simply
+ * spans them. With gaps, each stretch between gaps gets its own starting weight and they share
+ * one slope, so a jump during a gap does not tilt the line.
+ */
+function fitLine(stretches: { days: number[]; weights: number[] }[], minNoiseKg: number): Line {
+  const centred = stretches.map(({ days, weights }) => ({ days, weights, meanX: mean(days), meanY: mean(weights) }))
   let sxx = 0
   let sxy = 0
-  for (let i = 0; i < n; i++) {
-    sxx += (days[i] - meanX) ** 2
-    sxy += (days[i] - meanX) * (weights[i] - meanY)
+  let points = 0
+  for (const { days, weights, meanX, meanY } of centred) {
+    for (let i = 0; i < days.length; i++) {
+      sxx += (days[i] - meanX) ** 2
+      sxy += (days[i] - meanX) * (weights[i] - meanY)
+    }
+    points += days.length
   }
   const slope = sxy / sxx
   let squaredResiduals = 0
-  for (let i = 0; i < n; i++) {
-    const fitted = meanY + slope * (days[i] - meanX)
-    squaredResiduals += (weights[i] - fitted) ** 2
+  for (const { days, weights, meanX, meanY } of centred) {
+    for (let i = 0; i < days.length; i++) squaredResiduals += (weights[i] - (meanY + slope * (days[i] - meanX))) ** 2
   }
-  const noise = Math.max(minNoiseKg, Math.sqrt(squaredResiduals / (n - 2)))
+  const freedom = points - stretches.length - 1
+  const noise = freedom > 0 ? Math.max(minNoiseKg, Math.sqrt(squaredResiduals / freedom)) : minNoiseKg
   return { slope, slopeSe: noise / Math.sqrt(sxx) }
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b)
+  const middle = Math.floor(sorted.length / 2)
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
+}
+
+/** Runs of `minDays` or more days in [first, last) with no calories, as [first, last] unlogged day. */
+function findGaps(first: string, last: string, logged: Set<string>, minDays: number): [string, string][] {
+  const gaps: [string, string][] = []
+  let runStart: string | null = null
+  for (let day = first; day <= last; day = addDays(day, 1)) {
+    const unlogged = day < last && !logged.has(day)
+    if (unlogged && runStart === null) runStart = day
+    if (!unlogged && runStart !== null) {
+      if (daysBetween(runStart, day) >= minDays) gaps.push([runStart, addDays(day, -1)])
+      runStart = null
+    }
+  }
+  return gaps
 }
 
 function mean(values: number[]): number {
@@ -166,17 +226,54 @@ export function estimateExpenditure(input: ExpenditureInput): ExpenditureResult 
     return { status: 'not-enough', have, need }
   }
 
+  const loggedDays = inWindow.filter(
+    (entry): entry is LogEntry & { calories: number } => entry.date >= first && entry.date < last && entry.calories !== undefined,
+  )
+
+  // Forgotten meals: a day far under the usual is left out, unless low days are a regular pattern.
+  let partDays: string[] = []
+  if (settings.partDayShare > 0) {
+    const usual = median(loggedDays.map(entry => entry.calories))
+    const low = loggedDays.filter(entry => entry.calories < settings.partDayShare * usual)
+    if (low.length <= PART_DAY_PATTERN_SHARE * loggedDays.length) partDays = low.map(entry => entry.date)
+  }
+
+  // Gaps split the log into stretches. A weigh-in on a gap's first morning still shows the food
+  // before the gap, and the morning after a gap starts the next stretch; weigh-ins inside are dropped.
+  const gaps = Number.isFinite(settings.gapDays) ? findGaps(first, last, new Set(loggedDays.map(entry => entry.date)), settings.gapDays) : []
+  const groups: (typeof weighIns)[] = [[]]
+  for (const entry of weighIns) {
+    if (gaps.some(([gapStart, gapEnd]) => entry.date > gapStart && entry.date <= gapEnd)) continue
+    const stretch = gaps.filter(([, gapEnd]) => gapEnd < entry.date).length
+    while (groups.length <= stretch) groups.push([])
+    groups[stretch].push(entry)
+  }
+  const stretches = groups.filter(group => group.length >= 2)
+  const leftOut = new Set(partDays)
+  const usedIntake = loggedDays
+    .filter(entry => !leftOut.has(entry.date) && stretches.some(group => entry.date >= group[0].date && entry.date < group[group.length - 1].date))
+    .map(entry => entry.calories)
+  const used: MissingData = {
+    spanDays: stretches.reduce((sum, group) => sum + daysBetween(group[0].date, group[group.length - 1].date), 0),
+    weighIns: stretches.reduce((sum, group) => sum + group.length, 0),
+    intakeDays: usedIntake.length,
+  }
+  if (used.spanDays < need.spanDays || used.weighIns < need.weighIns || used.intakeDays < need.intakeDays) {
+    return { status: 'not-enough', have: used, need }
+  }
+
   const line = fitLine(
-    weighIns.map(entry => daysBetween(first, entry.date)),
-    weighIns.map(entry => entry.weightKg),
+    stretches.map(group => ({ days: group.map(entry => daysBetween(first, entry.date)), weights: group.map(entry => entry.weightKg) })),
     settings.minWeightNoiseKg,
   )
-  const averageIntake = mean(intake)
+  const averageIntake = mean(usedIntake)
   const fromData = averageIntake - line.slope * caloriesPerKg
 
   // Mix the formula and the data, each weighted by how sure it is (one over its variance).
   // A short or noisy log leans on the formula; after 3 to 4 weeks the data does most of the work.
-  const dataVariance = (caloriesPerKg * line.slopeSe * settings.slopeSeFactor) ** 2 + sampleVariance(intake) / intake.length
+  const coverage = settings.coverageWeighting ? Math.min(1, usedIntake.length / used.spanDays) : 1
+  const dataVariance =
+    ((caloriesPerKg * line.slopeSe * settings.slopeSeFactor) ** 2 + sampleVariance(usedIntake) / usedIntake.length) / coverage
   const formulaVariance = (settings.formulaShareSd * formulaMaintenance) ** 2
   const dataWeight = formulaVariance / (formulaVariance + dataVariance)
   const blended = dataWeight * fromData + (1 - dataWeight) * formulaMaintenance
@@ -207,8 +304,11 @@ export function estimateExpenditure(input: ExpenditureInput): ExpenditureResult 
     start: weighIns[0].date,
     end: last,
     weighIns: weighIns.length,
-    intakeDays: intake.length,
+    intakeDays: usedIntake.length,
     limited,
     unusual: Math.abs(fromData - formulaMaintenance) > UNUSUAL_SHARE * formulaMaintenance,
+    gaps,
+    partDays,
+    loggedShare: loggedDays.length / have.spanDays,
   }
 }
