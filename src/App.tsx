@@ -8,8 +8,13 @@ import { clearForm, deletePlan, loadForm, loadPlans, saveForm, savePlan } from '
 import type { SavedPlan } from './storage'
 import { Wizard } from './components/Wizard'
 import { planAsText, Results } from './components/Results'
+import { LogView } from './components/LogView'
 
 type View = { name: 'steps'; step: number } | { name: 'results' }
+type Tab = 'plan' | 'log'
+
+// The tab lives in the address (#log) so a reload or a home screen bookmark opens the same tab.
+const tabFromHash = (): Tab => (window.location.hash === '#log' ? 'log' : 'plan')
 
 export default function App() {
   // Returning visitors see their last answers; if those are complete, they land on their results.
@@ -17,7 +22,17 @@ export default function App() {
   const [view, setView] = useState<View>(() => (toPerson(form) ? { name: 'results' } : { name: 'steps', step: 0 }))
   const [savedPlans, setSavedPlans] = useState<SavedPlan[]>(() => loadPlans())
   const [toast, setToast] = useState('')
+  const [tab, setTab] = useState<Tab>(tabFromHash)
   const toastTimer = useRef<number>()
+
+  useEffect(() => {
+    const onHashChange = () => {
+      setTab(tabFromHash())
+      window.scrollTo({ top: 0 })
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
 
   useEffect(() => {
     saveForm(form)
@@ -95,13 +110,20 @@ export default function App() {
           </svg>
           <span className="brand-name">Macros</span>
         </a>
-        <a className="handle" href="https://instagram.com/maad.lifts" target="_blank" rel="noreferrer">
-          @maad.lifts
-        </a>
+        <nav className="tabs" aria-label="Sections">
+          <a className="tab" href="#plan" aria-current={tab === 'plan' ? 'page' : undefined}>
+            Plan
+          </a>
+          <a className="tab" href="#log" aria-current={tab === 'log' ? 'page' : undefined}>
+            Log
+          </a>
+        </nav>
       </header>
 
       <main className="shell">
-        {showingResults ? (
+        {tab === 'log' ? (
+          <LogView unit={form.unit} onUnitChange={unit => dispatch({ type: 'switchUnit', unit })} showToast={showToast} />
+        ) : showingResults ? (
           <Results
             plan={plan}
             goal={form.goal as Goal}

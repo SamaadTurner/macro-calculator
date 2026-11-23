@@ -47,6 +47,34 @@ test('each step passes axe checks when shown with errors', async ({ page }) => {
   }
 })
 
+/** Fills the log with a few days through the form, so the chart, history and errors all show. */
+async function fillLog(page: Page) {
+  await page.goto('./#log')
+  await page.getByRole('button', { name: 'Save day' }).click()
+  await expect(page.getByText('Enter a weight, calories, or both')).toBeVisible()
+  await expectNoViolations(page)
+  for (const [date, weight] of [
+    ['2026-11-20', '181'],
+    ['2026-11-21', '180.4'],
+    ['2026-11-22', '180.8'],
+  ]) {
+    await page.getByLabel('Date').fill(date)
+    await page.getByLabel('Weight', { exact: true }).fill(weight)
+    await page.getByRole('button', { name: 'Save day' }).click()
+  }
+  await expect(page.locator('.log-table tbody tr')).toHaveCount(3)
+  await page.getByRole('group', { name: /weight chart/i }).focus()
+  await page.keyboard.press('ArrowLeft')
+}
+
+test('the log page passes axe checks, empty and with data', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(2026, 10, 23, 9, 0))
+  await page.goto('./#log')
+  await expectNoViolations(page)
+  await fillLog(page)
+  await expectNoViolations(page)
+})
+
 test.describe('dark mode', () => {
   test.use({ colorScheme: 'dark' })
 
@@ -55,6 +83,12 @@ test.describe('dark mode', () => {
     await continueButton(page).click()
     await expectNoViolations(page)
     await answerAll(page, averageMan)
+    await expectNoViolations(page)
+  })
+
+  test('the log page passes axe checks in dark mode', async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 10, 23, 9, 0))
+    await fillLog(page)
     await expectNoViolations(page)
   })
 })

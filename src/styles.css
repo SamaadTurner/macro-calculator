@@ -36,6 +36,10 @@
   --carbs: #00897b;
   --fats: #a86f00;
 
+  /* Weight chart: blue dots for scale weights, bronze line for the trend (validated on the light card). */
+  --chart-scale: #3f74b0;
+  --chart-trend: #93561f;
+
   --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
@@ -77,6 +81,9 @@
     --protein: #e8584c;
     --carbs: #1fa99c;
     --fats: #c28400;
+
+    --chart-scale: #5a8bcc;
+    --chart-trend: #b97a3e;
 
     --shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
   }
@@ -174,19 +181,39 @@ a {
   text-transform: uppercase;
 }
 
-.handle {
-  color: var(--text-2);
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-decoration: none;
-  padding: 8px 12px;
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: 999px;
 }
 
-.handle:hover {
+.tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  color: var(--text-2);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  text-decoration: none;
+}
+
+.tab:hover {
   color: var(--text);
-  border-color: var(--line-strong);
+}
+
+.tab[aria-current='page'] {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.tab:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .shell {
@@ -912,6 +939,8 @@ a {
 }
 
 .card-head .choice-segmented .choice-option {
+  /* Sized by the label here, so "30 days" never spills out of its pill. */
+  flex: 1 0 auto;
   min-width: 44px;
   padding: 0 10px;
 }
@@ -1011,6 +1040,271 @@ a {
 .saved-meta {
   color: var(--text-3);
   font-size: 0.8125rem;
+}
+
+/* ==========================================================================
+   Daily log
+   ========================================================================== */
+.log {
+  animation: rise 0.4s var(--ease);
+}
+
+.date-input input {
+  font-family: var(--font-body);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.log-macros summary {
+  min-height: 44px;
+  color: var(--text-2);
+}
+
+.macro-fields {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.macro-fields .number-input {
+  padding: 0 12px;
+}
+
+.macro-fields .number-input input {
+  font-size: 1.375rem;
+}
+
+.log form .btn-primary,
+.log .stack > .btn-primary {
+  width: 100%;
+}
+
+.card-text {
+  color: var(--text-2);
+  margin: 8px 0 16px;
+}
+
+.empty-note {
+  color: var(--text-3);
+  padding: 24px 0 8px;
+  text-align: center;
+}
+
+.trend-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.trend-stats div {
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.trend-stats dt {
+  color: var(--text-3);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.trend-stats dd {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 18px;
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  margin-bottom: 4px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chart-scale);
+}
+
+.legend-line {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--chart-trend);
+  vertical-align: middle;
+}
+
+.chart-plot {
+  position: relative;
+  border-radius: var(--radius-sm);
+  touch-action: pan-y;
+}
+
+.chart-plot:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.chart-plot svg {
+  display: block;
+}
+
+.chart-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.chart-axis {
+  fill: var(--text-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-crosshair {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.chart-dot {
+  fill: var(--chart-scale);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.chart-trend {
+  fill: none;
+  stroke: var(--chart-trend);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-trend-dot {
+  fill: var(--chart-trend);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.chart-hit {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 8px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.chart-tooltip.is-visible {
+  opacity: 1;
+}
+
+.tooltip-date {
+  color: var(--text-3);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.tooltip-row {
+  color: var(--text-2);
+}
+
+.tooltip-row strong {
+  color: var(--text);
+  font-size: 0.9375rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  margin-top: 8px;
+}
+
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-table th,
+.log-table td {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.log-table thead th {
+  color: var(--text-3);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.log-table tbody th {
+  font-weight: 700;
+}
+
+.log-table td.food small {
+  display: block;
+  color: var(--text-3);
+  font-size: 0.75rem;
+}
+
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+}
+
+.btn-text {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-text:hover {
+  text-decoration: underline;
+}
+
+.show-more {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ==========================================================================
