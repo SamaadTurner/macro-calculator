@@ -79,20 +79,37 @@ export function paceFor(goal: Goal, pace: number | undefined): number {
  * Calories to add (positive) or take away (negative) for the goal and pace, and whether a
  * cap made it smaller than the pace asked for.
  */
-export function goalAdjustment(goal: Goal, maintenance: number, weightKg: number, pace: number): { calories: number; capped: boolean } {
+export function goalAdjustment(
+  goal: Goal,
+  maintenance: number,
+  weightKg: number,
+  pace: number,
+  caloriesPerKg = CALORIES_PER_KG,
+): { calories: number; capped: boolean } {
   if (goal === 'maintain') return { calories: 0, capped: false }
-  const fromPace = (weightKg * pace * CALORIES_PER_KG) / 7
+  const fromPace = (weightKg * pace * caloriesPerKg) / 7
   const cap = maintenance * (goal === 'cutting' ? MAX_DEFICIT_SHARE : MAX_SURPLUS_SHARE)
   const size = Math.min(fromPace, cap)
   return { calories: goal === 'cutting' ? -size : size, capped: fromPace > cap }
 }
 
-export function calculatePlan(person: Person): MacroPlan {
+/**
+ * The weekly check-in passes the maintenance it measured from the log, and the energy per kg
+ * for this person, instead of the formula and the 7,700 rule. Everything else (caps, floor,
+ * macro split) stays the same.
+ */
+export interface PlanOptions {
+  maintenance?: number
+  caloriesPerKg?: number
+}
+
+export function calculatePlan(person: Person, options: PlanOptions = {}): MacroPlan {
   const notes: string[] = []
+  const caloriesPerKg = options.caloriesPerKg ?? CALORIES_PER_KG
   const bmr = calculateBmr(person.weightKg, person.heightCm, person.age, person.sex)
-  const maintenance = bmr * person.activity
+  const maintenance = options.maintenance ?? bmr * person.activity
   const pace = paceFor(person.goal, person.pace)
-  const adjustment = goalAdjustment(person.goal, maintenance, person.weightKg, pace)
+  const adjustment = goalAdjustment(person.goal, maintenance, person.weightKg, pace, caloriesPerKg)
   if (adjustment.capped) {
     notes.push(
       person.goal === 'cutting'
@@ -158,7 +175,7 @@ export function calculatePlan(person: Person): MacroPlan {
       adjustment: finalAdjustment,
       pace,
       // What the final target works out to in body weight per week, after any cap or floor.
-      weeklyChangeKg: (finalAdjustment * 7) / CALORIES_PER_KG,
+      weeklyChangeKg: (finalAdjustment * 7) / caloriesPerKg,
       proteinPerKg,
       referenceWeightKg: Math.round(referenceWeightKg * 10) / 10,
     },

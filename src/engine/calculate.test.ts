@@ -228,3 +228,23 @@ describe('splitAcrossMeals', () => {
     expect(meals.reduce((a, b) => a + b, 0)).toBe(174)
   })
 })
+
+describe('plans from a measured maintenance (weekly check-in)', () => {
+  it('uses the given maintenance and energy per kg, worked out by hand', () => {
+    // 180 lb man, Steady cut: 81.65 kg x 0.5% x 6,620 / 7 = 386 below 2,500.
+    const plan = calculatePlan({ ...average, goal: 'cutting' }, { maintenance: 2500, caloriesPerKg: 6620 })
+    expect(plan.calories).toBe(2114)
+    expect(plan.breakdown.maintenance).toBe(2500)
+    expect(plan.breakdown.weeklyChangeKg).toBeCloseTo((-386 * 7) / 6620, 6)
+    expect(plan.protein.grams).toBe(174)
+    expect(plan.fats.grams).toBe(59)
+    expect(plan.carbs.grams).toBe(222)
+  })
+
+  it('still applies the floor and never goes above the measured maintenance', () => {
+    // Fastest pace: 55 kg x 1% x 6,000 / 7 = 471 below 1,500 is 1,029, under the 1,200 floor.
+    const woman: Person = { ...average, sex: 'female', weightKg: 55, goal: 'cutting', pace: 0.01 }
+    expect(calculatePlan(woman, { maintenance: 1500, caloriesPerKg: 6000 }).calories).toBe(1200)
+    expect(calculatePlan(woman, { maintenance: 1150, caloriesPerKg: 6000 }).calories).toBe(1150)
+  })
+})
