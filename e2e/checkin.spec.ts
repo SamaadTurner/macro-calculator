@@ -103,6 +103,32 @@ test('estimates maintenance from 4 weeks of log and saves a check-in', async ({ 
   await expect(page.getByRole('heading', { name: 'What you really burn' })).toBeVisible()
 })
 
+test('leaves out a day that looks like a forgotten meal and says so', async ({ page }) => {
+  // Day 10 of the steady log (17 days ago, Nov 6) logged 900 instead of 2,000.
+  const log = steadyLog(28).map((entry, i) => (i === 10 ? { ...entry, calories: 900 } : entry))
+  await openCheckIn(page, { form: averageManCut, log })
+  await expect(page.getByTestId('checkin-notices')).toContainText(
+    'One day logged under half your usual (Nov 6) looks like a forgotten meal and was left out.',
+  )
+  // Without the left-out day the average is still 2,000, so the estimate matches the steady log.
+  await expect(page.getByTestId('expenditure')).toHaveText('2,330')
+  await expect(page.getByText('Likely between 2,120 and 2,540.')).toBeVisible()
+  await expect(page.getByTestId('suggested-calories')).toHaveText('1,944')
+  await page.getByText('How this was worked out').click()
+  await expect(page.getByText('26 days, Oct 27 to Nov 22; 1 part-logged left out')).toBeVisible()
+})
+
+test('leans more on the formula when only some days are logged', async ({ page }) => {
+  const log = steadyLog(28).map((entry, i) => (i % 2 === 0 ? entry : { date: entry.date, weightKg: entry.weightKg }))
+  await openCheckIn(page, { form: averageManCut, log })
+  await expect(page.getByTestId('checkin-notices')).toContainText('Calories are logged on 14 of 27 days, so the estimate leans more on the formula.')
+  await expect(page.getByTestId('expenditure')).toHaveText('2,350')
+  await expect(page.getByTestId('data-share')).toHaveText('89%')
+  await expect(page.getByText('Likely between 2,080 and 2,630.')).toBeVisible()
+  await expect(page.getByTestId('suggested-calories')).toHaveText('1,967')
+  await expectNoViolations(page)
+})
+
 test('moves at most 200 calories a week from the last check-in', async ({ page }) => {
   const lastWeek = { date: isoDaysAgo(7), expenditure: 3000, calories: 2550, protein: 174, carbs: 300, fats: 71, goal: 'cutting' }
   await openCheckIn(page, { form: averageManCut, log: steadyLog(28), checkins: [lastWeek] })

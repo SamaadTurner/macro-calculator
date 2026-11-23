@@ -27,6 +27,8 @@ interface CheckInViewProps {
 const cal = (value: number) => value.toLocaleString('en-US')
 /** Estimates are shown to the nearest 10 calories; more digits would claim more than the data knows. */
 const round10 = (value: number) => Math.round(value / 10) * 10
+/** Under this share of days with calories, the page says the log is patchy. */
+const PATCHY_SHARE = 0.7
 
 function signedWeight(kg: number, unit: UnitSystem): string {
   const value = roundTo(unit === 'imperial' ? kgToLb(kg) : kg, 1)
@@ -215,6 +217,9 @@ function Ready({ result, current, planCalories, comparedWith, unit, savedToday, 
   const dataPct = Math.round(result.dataWeight * 100)
   const difference = planCalories === null ? 0 : plan.calories - planCalories
   const expected = weeklyChangeText(plan.breakdown.weeklyChangeKg, unit)
+  const spanDays = daysBetween(result.start, result.end)
+  const loggedDays = Math.round(result.loggedShare * spanDays)
+  const patchy = result.loggedShare < PATCHY_SHARE
 
   return (
     <>
@@ -230,8 +235,27 @@ function Ready({ result, current, planCalories, comparedWith, unit, savedToday, 
         <div className="share-bar" aria-hidden="true">
           <span className="share-data" style={{ width: `${dataPct}%` }} />
         </div>
-        {result.limited || result.unusual ? (
-          <ul className="notices">
+        {result.limited || result.unusual || result.partDays.length > 0 || patchy ? (
+          <ul className="notices" data-testid="checkin-notices">
+            {result.partDays.length > 0 ? (
+              <li className="notice">
+                <AlertIcon />{' '}
+                <span>
+                  {result.partDays.length === 1 ? 'One day' : `${result.partDays.length} days`} logged under half your usual (
+                  {result.partDays.map(day => formatDay(day)).join(', ')}) {result.partDays.length === 1 ? 'looks' : 'look'} like a forgotten meal
+                  and {result.partDays.length === 1 ? 'was' : 'were'} left out. If you really ate that little, the estimate may read a little high.
+                </span>
+              </li>
+            ) : null}
+            {patchy ? (
+              <li className="notice">
+                <AlertIcon />{' '}
+                <span>
+                  Calories are logged on {loggedDays} of {spanDays} days, so the estimate leans more on the formula. Days off the log are often
+                  the bigger days, so log those too, even as a rough guess.
+                </span>
+              </li>
+            ) : null}
             {result.limited ? (
               <li className="notice">
                 <AlertIcon />{' '}
@@ -295,7 +319,8 @@ function Ready({ result, current, planCalories, comparedWith, unit, savedToday, 
         <dl className="breakdown checkin-breakdown">
           <div>
             <dt>
-              Average calories logged ({result.intakeDays} days, {formatDay(result.start)} to {formatDay(addDays(result.end, -1))})
+              Average calories logged ({result.intakeDays} days, {formatDay(result.start)} to {formatDay(addDays(result.end, -1))}
+              {result.partDays.length > 0 ? `; ${result.partDays.length} part-logged left out` : ''})
             </dt>
             <dd>{cal(Math.round(result.averageIntake))} cal</dd>
           </div>
