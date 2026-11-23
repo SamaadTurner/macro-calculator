@@ -24,9 +24,12 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - uses: actions/upload-artifact@v4
+      # The site is packed for Pages here, well before the deploy job runs. Uploading and
+      # deploying in the same job raced: deploy-pages sometimes looked before the upload was
+      # listed and failed with "No artifacts named github-pages were found".
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
-          name: site
           path: dist
           retention-days: 7
 
@@ -67,13 +70,6 @@ jobs:
       group: pages
       cancel-in-progress: false
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: site
-          path: dist
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
       - id: deployment
         uses: actions/deploy-pages@v4
