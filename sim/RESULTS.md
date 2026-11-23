@@ -179,3 +179,51 @@ Share of people whose check-in used their log: week 1 0%, week 2 98%, week 3 100
 Average error at week 4 (positive = too high): Formula only +327; Check-in, limit 100 a week +66; Check-in (the app) +36; Check-in, limit 300 a week +30; Check-in, no weekly limit +29; Check-in without the patchy-log fixes +20.
 
 Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): Check-in, limit 100 a week 0%; Check-in (the app) 8%; Check-in, limit 300 a week 11%; Check-in, no weekly limit 11%; Check-in without the patchy-log fixes 8%.
+
+### Messy logs, and half the part-logged days ticked
+
+The messy population, where the user ticks "not complete" on half the days they logged only part of.
+
+| Method | Week 1 | Week 2 | Week 3 | Week 4 | Week 6 |
+|---|---|---|---|---|---|
+| Formula only | 335 / 711 (30%) | 321 / 689 (31%) | 314 / 683 (31%) | 309 / 669 (33%) | 306 / 666 (33%) |
+| Check-in (the app) | 335 / 711 (30%) | 194 / 479 (51%) | 139 / 354 (64%) | 121 / 305 (71%) | 99 / 270 (79%) |
+| Check-in without the patchy-log fixes | 335 / 711 (30%) | 181 / 475 (52%) | 141 / 366 (63%) | 134 / 356 (66%) | 117 / 320 (71%) |
+
+Share of people whose check-in used their log: week 1 0%, week 2 84%, week 3 99%, week 4 100%, week 5 100%, week 6 100%.
+
+Average error at week 4 (positive = too high): Formula only +292; Check-in (the app) −22; Check-in without the patchy-log fixes −70.
+
+Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): Check-in (the app) 12%; Check-in without the patchy-log fixes 14%.
+
+### Messy logs, and half the gap days filled with a rough guess
+
+The messy population, where the user goes back and enters a rough total for half the holiday and gap days they missed. A guess comes out at 85% of what was eaten, give or take 15%.
+
+| Method | Week 1 | Week 2 | Week 3 | Week 4 | Week 6 |
+|---|---|---|---|---|---|
+| Formula only | 335 / 711 (30%) | 321 / 689 (31%) | 314 / 683 (31%) | 309 / 669 (33%) | 306 / 666 (33%) |
+| Check-in (the app) | 335 / 711 (30%) | 184 / 463 (52%) | 135 / 351 (64%) | 124 / 323 (69%) | 105 / 293 (76%) |
+| Check-in without the patchy-log fixes | 335 / 711 (30%) | 178 / 459 (54%) | 143 / 366 (63%) | 141 / 369 (63%) | 128 / 336 (68%) |
+
+Share of people whose check-in used their log: week 1 0%, week 2 88%, week 3 100%, week 4 100%, week 5 100%, week 6 100%.
+
+Average error at week 4 (positive = too high): Formula only +292; Check-in (the app) −47; Check-in without the patchy-log fixes −90.
+
+Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): Check-in (the app) 14%; Check-in without the patchy-log fixes 15%.
+
+### Messy logs, both habits
+
+Half the part-logged days ticked and half the missed days guessed.
+
+| Method | Week 1 | Week 2 | Week 3 | Week 4 | Week 6 |
+|---|---|---|---|---|---|
+| Formula only | 335 / 711 (30%) | 321 / 689 (31%) | 314 / 683 (31%) | 309 / 669 (33%) | 306 / 666 (33%) |
+| Check-in (the app) | 335 / 711 (30%) | 188 / 472 (51%) | 136 / 343 (65%) | 125 / 310 (71%) | 101 / 270 (79%) |
+| Check-in without the patchy-log fixes | 335 / 711 (30%) | 178 / 463 (53%) | 140 / 362 (64%) | 134 / 352 (65%) | 116 / 314 (73%) |
+
+Share of people whose check-in used their log: week 1 0%, week 2 87%, week 3 100%, week 4 100%, week 5 100%, week 6 100%.
+
+Average error at week 4 (positive = too high): Formula only +292; Check-in (the app) −31; Check-in without the patchy-log fixes −70.
+
+Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): Check-in (the app) 13%; Check-in without the patchy-log fixes 14%.

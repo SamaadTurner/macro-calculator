@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs'
-import { LIMIT_METHODS, runStudy } from './study'
+import { HABIT_METHODS, LIMIT_METHODS, runStudy } from './study'
 import type { StudyOptions, Summary } from './study'
 
 // Runs the simulation study and writes sim/RESULTS.md. Usage: npm run simulate
@@ -97,6 +97,21 @@ const parts = [
     'Both at once: the limit has to hold back the false drops without holding back a real rise.',
   ),
   section('Limit sizes on clean logs', { ...base, methods: LIMIT_METHODS }, 'The main population again, for comparison.'),
+  section(
+    'Messy logs, and half the part-logged days ticked',
+    { ...base, messy: true, methods: HABIT_METHODS, tickShare: 0.5 },
+    'The messy population, where the user ticks "not complete" on half the days they logged only part of.',
+  ),
+  section(
+    'Messy logs, and half the gap days filled with a rough guess',
+    { ...base, messy: true, methods: HABIT_METHODS, guessShare: 0.5 },
+    'The messy population, where the user goes back and enters a rough total for half the holiday and gap days they missed. A guess comes out at 85% of what was eaten, give or take 15%.',
+  ),
+  section(
+    'Messy logs, both habits',
+    { ...base, messy: true, methods: HABIT_METHODS, tickShare: 0.5, guessShare: 0.5 },
+    'Half the part-logged days ticked and half the missed days guessed.',
+  ),
 ]
 
 writeFileSync(new URL('./RESULTS.md', import.meta.url), parts.join('\n'))

@@ -45,6 +45,10 @@ export interface Habits {
   lapses?: { startDay: number; days: number; extraShare: number }[]
   /** Chance on a normal day of logging only part of the day's food (a forgotten meal). */
   partialDayChance?: number
+  /** Chance they tick "not complete" on a day they logged only part of. */
+  tickShare?: number
+  /** Chance they go back and enter a rough guess for a holiday or gap day they did not log. */
+  guessShare?: number
 }
 
 /** Thermic effect of food and adaptive thermogenesis, as shares of a change in intake (Hall et al. 2011). */
@@ -67,6 +71,13 @@ export const HOLIDAY_WEIGH_IN = 0.3
 export const HOLIDAY_LOG_DAY = 0.3
 export const HOLIDAY_LOGGED_SHARE = 0.6
 
+/**
+ * A rough guess for a day not logged at the time comes out at this share of what was really
+ * eaten, give or take GUESS_SD: people tend to guess big days low. Assumptions.
+ */
+export const GUESS_MEAN = 0.85
+export const GUESS_SD = 0.15
+
 const within = (day: number, stretch: { startDay: number; days: number }) => day >= stretch.startDay && day < stretch.startDay + stretch.days
 
 export interface Day {
@@ -75,6 +86,8 @@ export interface Day {
   scaleKg?: number
   /** Logged calories, if they logged. */
   loggedCalories?: number
+  /** They ticked "not complete" for this day. */
+  incomplete?: boolean
   /** What they really burned that day. */
   trueExpenditure: number
   /** Their true weight without water noise. */
@@ -85,8 +98,11 @@ function mifflinBase(weightKg: number, body: Body): number {
   return 10 * weightKg + 6.25 * body.heightCm - 5 * body.age + body.sexOffset
 }
 
-/** Runs `days` days from `startDate` (best a Monday, for the weekend bump). */
-export function simulate(body: Body, habits: Habits, days: number, startDate: string, random: Random): Day[] {
+/**
+ * Runs `days` days from `startDate` (best a Monday, for the weekend bump). Ticks and rough
+ * guesses draw from `habitRandom`, so turning them on leaves everything else exactly the same.
+ */
+export function simulate(body: Body, habits: Habits, days: number, startDate: string, random: Random, habitRandom: Random = random): Day[] {
   let fat = body.fatKg
   let lean = body.leanKg
   const startWeight = fat + lean
@@ -125,9 +141,9 @@ export function simulate(body: Body, habits: Habits, days: number, startDate: st
     const expenditure = body.baselineExpenditure * changed * (mifflinBase(weight, body) / startBase) + TEF_SHARE * (intake - baselineIntake) + adaptive
     record.trueExpenditure = expenditure
 
+    // Part of a day: a forgotten meal on a normal day, or most of a holiday day.
+    let partOfDay = 1
     if (!random.chance(onHoliday ? 1 - HOLIDAY_LOG_DAY : habits.missCalories)) {
-      // Part of a day: a forgotten meal on a normal day, or most of a holiday day.
-      let partOfDay = 1
       if (onHoliday) partOfDay = HOLIDAY_LOGGED_SHARE
       else if (habits.partialDayChance && random.chance(habits.partialDayChance)) partOfDay = random.uniform(0.4, 0.7)
       // Logged calories leave out the under-logged share and are rounded like a food app would.
@@ -136,6 +152,12 @@ export function simulate(body: Body, habits: Habits, days: number, startDate: st
     if (lapse) {
       delete record.scaleKg
       delete record.loggedCalories
+    }
+    if (habits.tickShare && record.loggedCalories !== undefined && partOfDay < 1 && habitRandom.chance(habits.tickShare)) {
+      record.incomplete = true
+    }
+    if (habits.guessShare && record.loggedCalories === undefined && (onHoliday || lapse) && habitRandom.chance(habits.guessShare)) {
+      record.loggedCalories = Math.round((intake * (1 - habits.underLogging) * Math.max(0.3, habitRandom.normal(GUESS_MEAN, GUESS_SD))) / 10) * 10
     }
 
     // Energy balance into fat and lean by Forbes' curve.
@@ -162,6 +184,7 @@ export function toLog(days: Day[]): LogEntry[] {
       const entry: LogEntry = { date: day.date }
       if (day.scaleKg !== undefined) entry.weightKg = day.scaleKg
       if (day.loggedCalories !== undefined) entry.calories = day.loggedCalories
+      if (day.incomplete) entry.incomplete = true
       return entry
     })
 }

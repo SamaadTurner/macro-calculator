@@ -43,6 +43,10 @@ export interface PopulationOptions {
   underLoggingMax?: number
   /** Holidays, stretches with no log, and forgotten meals (see `addMessyHabits`). */
   messy?: boolean
+  /** Share of part-logged days the user ticks as not complete. */
+  tickShare?: number
+  /** Share of unlogged holiday and gap days the user fills in with a rough guess. */
+  guessShare?: number
 }
 
 export function randomPerson(random: Random, options: PopulationOptions = {}): SimPerson {
@@ -86,6 +90,8 @@ export function randomPerson(random: Random, options: PopulationOptions = {}): S
     expenditureChange: options.expenditureChange,
   }
   if (options.messy) addMessyHabits(random, habits)
+  if (options.tickShare) habits.tickShare = options.tickShare
+  if (options.guessShare) habits.guessShare = options.guessShare
   return { person, body, habits, target }
 }
 
@@ -143,6 +149,9 @@ export const METHODS: Method[] = [
   { name: 'Check-in with 7,700 cal/kg', fixedCaloriesPerKg: 7700 },
   { name: 'Log only (no formula, no limit)', settings: { ...DEFAULT_SETTINGS, formulaShareSd: 100, maxChangePerWeek: Infinity } },
 ]
+
+/** The app with and without the patchy-log fixes, for the tick and rough-guess scenarios. */
+export const HABIT_METHODS: Method[] = [METHODS[0], METHODS[1], WITHOUT_PATCHY_LOG_FIXES]
 
 /** The weekly limit at other sizes, for the messy-log scenario. */
 export const LIMIT_METHODS: Method[] = [
@@ -233,13 +242,15 @@ export interface StudyOptions extends PopulationOptions {
 
 export function runStudy(options: StudyOptions): Summary[] {
   const random = makeRandom(options.seed)
+  // A separate stream for ticks and guesses, so those scenarios have the very same people and days.
+  const habitRandom = makeRandom(options.seed + 1)
   const methods = options.methods ?? METHODS
   const errors = methods.map(() => CHECK_IN_DAYS.map(() => [] as { error: number; share: number; fromLog: boolean; wrongMove?: boolean }[]))
   const lastDay = CHECK_IN_DAYS[CHECK_IN_DAYS.length - 1]
 
   for (let i = 0; i < options.people; i++) {
     const sim = randomPerson(random, options)
-    const days = simulate(sim.body, sim.habits, lastDay + 1, START_DATE, random)
+    const days = simulate(sim.body, sim.habits, lastDay + 1, START_DATE, random, habitRandom)
     const targets = CHECK_IN_DAYS.map(day => {
       const truth = truthAt(sim, days, day)
       return options.realCalories ? truth.real : truth.logged

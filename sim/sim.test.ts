@@ -107,6 +107,37 @@ describe('body model', () => {
     expect(short.every(day => day.loggedCalories! >= 1040 && day.loggedCalories! <= 1820)).toBe(true)
   })
 
+  it('ticks only days logged in part, and the tick reaches the log', () => {
+    const habits = { ...quiet(2600), partialDayChance: 0.3, tickShare: 1 }
+    const days = simulate(body, habits, 100, START_DATE, makeRandom(7), makeRandom(8))
+    const ticked = days.filter(day => day.incomplete)
+    expect(ticked.length).toBeGreaterThan(15)
+    expect(ticked.every(day => day.loggedCalories! < 2600)).toBe(true)
+    expect(days.filter(day => !day.incomplete).every(day => day.loggedCalories === 2600)).toBe(true)
+    expect(toLog(days).filter(entry => entry.incomplete)).toHaveLength(ticked.length)
+  })
+
+  it('fills only holiday and gap days with rough guesses', () => {
+    const habits = { ...quiet(2600), lapses: [{ startDay: 10, days: 5, extraShare: 0 }], guessShare: 1 }
+    const days = simulate(body, habits, 20, START_DATE, makeRandom(9), makeRandom(10))
+    const gap = days.slice(10, 15)
+    expect(gap.every(day => day.loggedCalories !== undefined && day.scaleKg === undefined)).toBe(true)
+    // Guesses come out around 85% of the 2,600 eaten.
+    const average = gap.reduce((sum, day) => sum + day.loggedCalories!, 0) / gap.length
+    expect(average).toBeGreaterThan(1700)
+    expect(average).toBeLessThan(2700)
+    expect(days.slice(0, 10).every(day => day.loggedCalories === 2600)).toBe(true)
+  })
+
+  it('leaves everything else the same when ticks and guesses are turned on', () => {
+    const habits = { ...quiet(2600), scaleNoiseShare: 0.005, intakeDaySd: 0.2, partialDayChance: 0.2 }
+    const plain = simulate(body, habits, 40, START_DATE, makeRandom(11), makeRandom(12))
+    const ticking = simulate(body, { ...habits, tickShare: 0.5 }, 40, START_DATE, makeRandom(11), makeRandom(12))
+    expect(ticking.map(day => [day.scaleKg, day.loggedCalories, day.trueExpenditure])).toEqual(
+      plain.map(day => [day.scaleKg, day.loggedCalories, day.trueExpenditure]),
+    )
+  })
+
   it('turns days into log entries, skipping missed ones', () => {
     const days = simulate(body, { ...quiet(2600), missWeighIn: 0.5, missCalories: 0.5 }, 100, START_DATE, makeRandom(3))
     const log = toLog(days)
