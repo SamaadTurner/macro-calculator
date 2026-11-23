@@ -24,7 +24,7 @@ returning visitor lands straight on their results.
   numbers.
 - Save up to ten plans on the device, copy a plan as text, or share it from a phone.
 - A daily log (the Log tab): weight, calories eaten and optional protein, carbs and fats for
-  each day. A chart shows each weigh-in and a smoothed trend (an exponential moving average
+  each day, with a tick for "not all of this day's food is logged". A chart shows each weigh-in and a smoothed trend (an exponential moving average
   that moves 10% toward each new weigh-in, from John Walker's *The Hacker's Diet*), the trend
   weight, and how much it moved over the last 7 days. The chart has a hover readout and can be
   read with the arrow keys; the history table below it lists every number.
@@ -102,8 +102,9 @@ The formula above is a starting guess, and for about one person in four it is of
 4. **Burn from the log** = average calories eaten − weight change per day × energy per kg. A
    logged day under half the usual (median) day looks like a forgotten meal and is left out of
    the average, since what was eaten still shows on the scale. If more than 1 in 5 days are that
-   low it looks like a pattern (fasting days, say), and they all stay in. The page lists any day
-   it left out.
+   low it looks like a pattern (fasting days, say), and they all stay in. Days ticked as not
+   complete in the log are left out too, however close to usual they are. The page lists any
+   day it left out.
 5. **Mixed with the formula** by how certain each one is (inverse-variance weighting): the
    formula is taken as ±15%, the log's uncertainty comes from the scatter of the weigh-ins
    around the line (at least 0.4 kg a day) and of the logged calories. Scale water carries over
@@ -189,6 +190,18 @@ Week 1 has too little data, so the check-in shows the formula. What else the stu
   [`sim/TUNING-FIXES.md`](sim/TUNING-FIXES.md)), with the cut-off at half rather than 60% of
   the usual day because it does almost as well and is safer for people who eat light on purpose.
   Messy logs are still the hardest case: 105 at week 6 against 72 on clean logs.
+- **Ticking short days helps; guessing missed days does not.** Run on the same messy people and
+  days, with only the habit changed:
+
+  | Messy logs | Week 4 | Week 6 | Week 6, 90th percentile | Average error, week 4 |
+  |---|---|---|---|---|
+  | Nobody ticks or guesses | 122 | 105 | 294 | −39 |
+  | Half the part-logged days ticked "not complete" | 121 | **99** | **270** | **−22** |
+  | Half the missed holiday and gap days filled with a rough guess | 124 | 105 | 293 | −47 |
+
+  A guess was modelled at 85% of what was eaten, give or take 15%, since people tend to guess
+  big days low (an assumption). With accurate guesses the week 6 error would drop to 92, but
+  low guesses only add low days, so the app offers the tick and does not ask for guesses.
 - **Splitting the log at gaps made it worse.** Fitting the weight line separately on each side of
   a gap of 2 to 5 unlogged days, so weight gained during a holiday is not counted, raised the
   error on clean and messy logs alike. After a holiday the extra water comes off fast, and a
@@ -230,19 +243,19 @@ e2e/            Playwright tests, including axe accessibility scans
 
 ## Tests
 
-- **130 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the log
+- **136 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the log
   (dates across month ends and daylight saving, the trend after gaps, backup files), the chart, and the check-in (hand-worked
-  energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 35-day window, the weekly limit, forgotten-meal days, fasting
+  energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 35-day window, the weekly limit, forgotten-meal days, ticked days, fasting
   days, patchy logs, splitting at gaps) and the
-  simulation (seeded random numbers, energy balance, the water drop, holidays, gaps and forgotten meals, repeatable results). Every bug
+  simulation (seeded random numbers, energy balance, the water drop, holidays, gaps and forgotten meals, ticks and rough guesses, repeatable results). Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
-- **46 end-to-end tests** (Playwright) on a desktop and a touch phone screen (90 runs; one
+- **48 end-to-end tests** (Playwright) on a desktop and a touch phone screen (94 runs; one
   test is mouse-only and one is touch-only), against the production build. They cover the full flow in both unit systems, every error message, unit
   switching, the goal pace, the calorie floor (and that it never goes above maintenance), the under-18 rule, pill rows on a 320 px phone, saved plans, returning visitors, broken saved
   data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, logging,
-  editing and deleting days, backup export and import, the chart with the keyboard, the check-in (exact numbers checked
-  against a separate Python version, saving, the weekly limit, a forgotten-meal day, a patchy log, the link from the Plan tab, three tabs on a 320 px phone), and an
+  editing and deleting days, the not-complete tick, backup export and import, the chart with the keyboard, the check-in (exact numbers checked
+  against a separate Python version, saving, the weekly limit, a forgotten-meal day, a ticked day, a patchy log, the link from the Plan tab, three tabs on a 320 px phone), and an
   [axe](https://github.com/dequelabs/axe-core) scan for WCAG 2.1 A and AA rules on every step,
   with and without errors showing, in light and dark mode.
 
@@ -276,8 +289,8 @@ npm run dev            # http://localhost:5173/macro-calculator/
 - The check-in's accuracy is measured on simulated people only (see above), not real users.
 - Days with no food logged are left out of the check-in, but a gap where you ate more than
   usual still pulls the estimate low (the page says so when under 70% of days are logged, and
-  the estimate leans on the formula). A forgotten meal is only caught when the day comes out
-  under half your usual; a smaller miss still counts.
+  the estimate leans on the formula). A forgotten meal you did not tick is only caught when the
+  day comes out under half your usual; a smaller miss still counts.
 - The log is kept in this browser's local storage (a few hundred bytes a day, so years fit
   well under the browser's limit). Clearing site data deletes it, which is why there is an
   export button. There is no account or sync.
