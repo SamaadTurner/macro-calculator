@@ -125,10 +125,20 @@ export interface Method {
   formulaOnly?: boolean
 }
 
+/** The check-in as it was before part-logged days were left out and patchy logs trusted less. */
+const WITHOUT_PATCHY_LOG_FIXES: Method = {
+  name: 'Check-in without the patchy-log fixes',
+  settings: { ...DEFAULT_SETTINGS, partDayShare: 0, coverageWeighting: false },
+}
+
 export const METHODS: Method[] = [
   { name: 'Formula only', formulaOnly: true },
   { name: 'Check-in (the app)' },
-  { name: 'Check-in, first version (28 days, no carry-over fix)', settings: { ...DEFAULT_SETTINGS, windowDays: 28, slopeSeFactor: 1 } },
+  {
+    name: 'Check-in, first version (28 days, no carry-over fix)',
+    settings: { ...DEFAULT_SETTINGS, windowDays: 28, slopeSeFactor: 1, partDayShare: 0, coverageWeighting: false },
+  },
+  WITHOUT_PATCHY_LOG_FIXES,
   { name: 'Check-in, no weekly limit', settings: { ...DEFAULT_SETTINGS, maxChangePerWeek: Infinity } },
   { name: 'Check-in with 7,700 cal/kg', fixedCaloriesPerKg: 7700 },
   { name: 'Log only (no formula, no limit)', settings: { ...DEFAULT_SETTINGS, formulaShareSd: 100, maxChangePerWeek: Infinity } },
@@ -140,7 +150,8 @@ export const LIMIT_METHODS: Method[] = [
   { name: 'Check-in, limit 100 a week', settings: { ...DEFAULT_SETTINGS, maxChangePerWeek: 100 } },
   { name: 'Check-in (the app)' },
   { name: 'Check-in, limit 300 a week', settings: { ...DEFAULT_SETTINGS, maxChangePerWeek: 300 } },
-  METHODS[3],
+  METHODS[4],
+  WITHOUT_PATCHY_LOG_FIXES,
 ]
 
 export interface Estimate {

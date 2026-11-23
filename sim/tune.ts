@@ -16,9 +16,17 @@ const SCORED_DAYS = [14, 21, 28, 42]
 const CHANGE = process.env.CHANGE === '1' ? { day: 21, factor: 1.12 } : undefined
 // MESSY=1: holidays, gaps and forgotten meals, and only the weekly limit changes.
 const MESSY = process.env.MESSY === '1'
+// FIXES=1: only the gap, part-day and coverage settings change (pair with MESSY=1 or not).
+const FIXES = process.env.FIXES === '1'
 
 const grid: EstimatorSettings[] = []
-if (MESSY) {
+if (FIXES) {
+  for (const gapDays of [Infinity, 2, 3, 4, 5]) {
+    for (const partDayShare of [0, 0.5, 0.6, 0.7]) {
+      for (const coverageWeighting of [false, true]) grid.push({ ...DEFAULT_SETTINGS, gapDays, partDayShare, coverageWeighting })
+    }
+  }
+} else if (MESSY) {
   for (const maxChangePerWeek of [100, 150, 200, 250, 300, Infinity]) grid.push({ ...DEFAULT_SETTINGS, maxChangePerWeek })
 } else for (const formulaShareSd of [0.1, 0.15]) {
   for (const maxChangePerWeek of [200, Infinity]) {
@@ -45,26 +53,31 @@ const p90 = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(v
 const rows = grid.map(settings => {
   const method: Method = { name: 'tune', settings }
   const errors = CHECK_IN_DAYS.map(() => [] as number[])
+  let signed = 0
   for (const { sim, days, truths } of people) {
-    runMethod(sim, days, method).forEach((estimate, d) => errors[d].push(Math.abs(estimate.value - truths[d])))
+    runMethod(sim, days, method).forEach((estimate, d) => {
+      errors[d].push(Math.abs(estimate.value - truths[d]))
+      if (CHECK_IN_DAYS[d] === 42) signed += estimate.value - truths[d]
+    })
   }
   const perDay = SCORED_DAYS.map(day => median(errors[CHECK_IN_DAYS.indexOf(day)]))
   const p90PerDay = SCORED_DAYS.map(day => p90(errors[CHECK_IN_DAYS.indexOf(day)]))
   const average = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length
-  return { settings, perDay, score: average(perDay), p90Score: average(p90PerDay) }
+  return { settings, perDay, score: average(perDay), p90Score: average(p90PerDay), bias: signed / people.length }
 })
 
 rows.sort((a, b) => a.score - b.score)
 const describe = (s: EstimatorSettings) =>
-  `formula ±${s.formulaShareSd * 100}%, limit ${s.maxChangePerWeek}, noise ${s.minWeightNoiseKg} kg, window ${s.windowDays} d, slope SE x${s.slopeSeFactor}`
+  `formula ±${s.formulaShareSd * 100}%, limit ${s.maxChangePerWeek}, noise ${s.minWeightNoiseKg} kg, window ${s.windowDays} d, slope SE x${s.slopeSeFactor}` +
+  (FIXES ? `, gaps ${s.gapDays} d, part days <${s.partDayShare * 100}%, coverage ${s.coverageWeighting ? 'on' : 'off'}` : '')
 const current = rows.find(row => describe(row.settings) === describe(DEFAULT_SETTINGS))!
 const lines = [
   `Tuning${MESSY ? ' (holidays, gaps and forgotten meals)' : ''}${CHANGE ? ' (burn up 12% from day 21)' : ''}, ${PEOPLE} people, seed ${SEED}. Median error (cal) at weeks ${SCORED_DAYS.map(d => d / 7).join(', ')}, their average, and the average 90th percentile error.`,
   '',
-  ...rows.slice(0, 15).map((row, i) => `${i + 1}. ${describe(row.settings)}: ${row.perDay.map(Math.round).join(' / ')} → ${row.score.toFixed(1)} (90th percentile ${row.p90Score.toFixed(0)})`),
+  ...rows.slice(0, FIXES ? 40 : 15).map((row, i) => `${i + 1}. ${describe(row.settings)}: ${row.perDay.map(Math.round).join(' / ')} → ${row.score.toFixed(1)} (90th percentile ${row.p90Score.toFixed(0)}, week 6 average error ${row.bias.toFixed(0)})`),
   '',
-  `Current (rank ${rows.indexOf(current) + 1} of ${rows.length}): ${describe(current.settings)}: ${current.perDay.map(Math.round).join(' / ')} → ${current.score.toFixed(1)} (90th percentile ${current.p90Score.toFixed(0)})`,
+  `Current (rank ${rows.indexOf(current) + 1} of ${rows.length}): ${describe(current.settings)}: ${current.perDay.map(Math.round).join(' / ')} → ${current.score.toFixed(1)} (90th percentile ${current.p90Score.toFixed(0)}, week 6 average error ${current.bias.toFixed(0)})`,
 ]
-const file = `./TUNING${MESSY ? '-MESSY' : ''}${CHANGE ? '-CHANGE' : ''}.md`
+const file = `./TUNING${FIXES ? '-FIXES' : ''}${MESSY ? '-MESSY' : ''}${CHANGE ? '-CHANGE' : ''}.md`
 writeFileSync(new URL(file, import.meta.url), lines.join('\n') + '\n')
 console.log(lines.join('\n'))

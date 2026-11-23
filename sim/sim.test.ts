@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FAT_CALORIES_PER_KG, LEAN_CALORIES_PER_KG } from '../src/engine/energy'
-import { estimateExpenditure } from '../src/coach/expenditure'
+import { DEFAULT_SETTINGS, estimateExpenditure } from '../src/coach/expenditure'
 import { simulate, toLog } from './body'
 import type { Body, Habits } from './body'
 import { makeRandom } from './random'
@@ -127,7 +127,7 @@ describe('the estimator on a clean simulated log', () => {
       today,
       formulaMaintenance: 3500,
       caloriesPerKg: 6700,
-      settings: { windowDays: 35, minSpanDays: 10, minWeighIns: 5, minIntakeDays: 7, formulaShareSd: 100, minWeightNoiseKg: 0.4, maxChangePerWeek: Infinity, slopeSeFactor: 1 },
+      settings: { ...DEFAULT_SETTINGS, formulaShareSd: 100, maxChangePerWeek: Infinity, slopeSeFactor: 1 },
     })
     if (result.status !== 'ready') throw new Error('expected an estimate')
     // Off only by the scale rounding and by the energy per kg not matching this exact body.
