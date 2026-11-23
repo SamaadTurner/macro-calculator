@@ -23,6 +23,13 @@ returning visitor lands straight on their results.
   updates the numbers right away, grams per meal for 3 to 6 meals, and the working behind the
   numbers.
 - Save up to ten plans on the device, copy a plan as text, or share it from a phone.
+- A daily log (the Log tab): weight, calories eaten and optional protein, carbs and fats for
+  each day. A chart shows each weigh-in and a smoothed trend (an exponential moving average
+  that moves 10% toward each new weigh-in, from John Walker's *The Hacker's Diet*), the trend
+  weight, and how much it moved over the last 7 days. The chart has a hover readout and can be
+  read with the arrow keys; the history table below it lists every number.
+- Export the log as a JSON backup and import it on another device. Days in the backup replace
+  the same days on the device; anything unreadable is skipped and counted.
 - Light and dark themes in warm gym colours (cream walls, wood, black iron), following the
   phone's setting.
 
@@ -60,19 +67,22 @@ src/
   engine/       the math, no React: checks, unit conversion, the plan
   form.ts       form state, unit switching, which step is complete
   storage.ts    local storage, guarded against blocked or broken data
-  components/   the steps, the results page and the ring
+  log/          the daily log: dates, entries, form checks, trend, backup files
+  components/   the steps, the results page, the ring, the log page and the weight chart
 e2e/            Playwright tests, including axe accessibility scans
 ```
 
 ## Tests
 
-- **52 unit tests** (Vitest) for the math, the checks, unit switching and storage. Every bug
+- **80 unit tests** (Vitest) for the math, the checks, unit switching, storage, the log
+  (dates across month ends and daylight saving, the trend after gaps, backup files) and the chart. Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
-- **22 end-to-end tests** (Playwright) on a desktop and a touch phone screen (42 runs; one
+- **33 end-to-end tests** (Playwright) on a desktop and a touch phone screen (64 runs; one
   test is mouse-only and one is touch-only), against the production build. They cover the full flow in both unit systems, every error message, unit
   switching, the calorie floor, the under-18 rule, saved plans, returning visitors, broken saved
-  data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, and an
+  data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, logging,
+  editing and deleting days, backup export and import, the chart with the keyboard, and an
   [axe](https://github.com/dequelabs/axe-core) scan for WCAG 2.1 A and AA rules on every step,
   with and without errors showing, in light and dark mode.
 
@@ -99,14 +109,18 @@ npm run dev            # http://localhost:5173/macro-calculator/
 
 ## Known limits
 
-- Uses a formula only. It does not learn from your real weight changes yet.
+- The targets come from a formula only. The log shows your trend but does not adjust the
+  targets from it yet.
+- The log is kept in this browser's local storage (a few hundred bytes a day, so years fit
+  well under the browser's limit). Clearing site data deletes it, which is why there is an
+  export button. There is no account or sync.
 - `npm audit` reports moderate advisories in development-only packages (the Vite dev server and
   Vitest). None of that code is in the built site.
 
 ## Planned
 
-A daily log of weight and calories, and an estimate of your real energy use from your weight
-trend, so the targets adjust each week.
+An estimate of your real energy use from your weight trend and logged calories, so the targets
+adjust each week.
 
 ## License
 
