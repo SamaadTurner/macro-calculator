@@ -99,21 +99,28 @@ The formula above is a starting guess, and for about one person in four it is of
    with body fat estimated from BMI, age and sex
    ([Deurenberg 1991](https://pubmed.ncbi.nlm.nih.gov/2043597/)). For a 180 lb, 5 ft 10 in,
    30 year old man that is about 6,620 calories per kg; leaner people get less, heavier people more.
-4. **Burn from the log** = average calories eaten − weight change per day × energy per kg.
+4. **Burn from the log** = average calories eaten − weight change per day × energy per kg. A
+   logged day under half the usual (median) day looks like a forgotten meal and is left out of
+   the average, since what was eaten still shows on the scale. If more than 1 in 5 days are that
+   low it looks like a pattern (fasting days, say), and they all stay in. The page lists any day
+   it left out.
 5. **Mixed with the formula** by how certain each one is (inverse-variance weighting): the
    formula is taken as ±15%, the log's uncertainty comes from the scatter of the weigh-ins
    around the line (at least 0.4 kg a day) and of the logged calories. Scale water carries over
    from one day to the next, so the weigh-ins are not independent; the line's uncertainty is
-   multiplied by 1.73, the usual correction for a day-to-day carry-over of about 0.5. A short or
-   noisy log leans on the formula; with four weeks of daily data the log does most of the work.
-   The page shows the split and a likely range.
+   multiplied by 1.73, the usual correction for a day-to-day carry-over of about 0.5. The log's
+   uncertainty is also divided by the share of days with calories logged, because the days left
+   off a log are often the bigger ones (a weekend away), so a patchy log tends to read low. A
+   short, noisy or patchy log leans on the formula; with four weeks of daily data the log does
+   most of the work. The page shows the split and a likely range.
 6. **Weekly limit:** between saved check-ins the estimate moves at most 200 calories a week, so
    one odd week does not swing the targets.
 
 The suggested targets then use the same rules as the plan (pace, caps, the floor, the macro
 split), with the measured maintenance and the energy per kg above. The first estimate needs 5
 weigh-ins spread over at least 10 days and 7 days with calories. The page says when the log is
-far (35%) from the formula and suggests checking the logging. Check-ins are saved on the device
+far (35%) from the formula and suggests checking the logging, and when fewer than 70% of days
+have calories it says the estimate leans more on the formula. Check-ins are saved on the device
 with a history, and the Plan tab shows the latest one above the formula numbers.
 
 ## How accurate the check-in is (simulation study)
@@ -151,34 +158,49 @@ Median error in calories a day, and the share of people within 10% of the truth:
 | | Week 1 | Week 2 | Week 3 | Week 4 | Week 6 |
 |---|---|---|---|---|---|
 | Formula | 341 (28%) | 333 (29%) | 334 (29%) | 334 (29%) | 326 (29%) |
-| Check-in | 341 (28%) | 182 (52%) | 143 (62%) | **119 (73%)** | **74 (89%)** |
+| Check-in | 341 (28%) | 188 (50%) | 143 (63%) | **119 (72%)** | **72 (89%)** |
 | Formula, if everyone logged everything | 174 (61%) | 167 (63%) | 164 (63%) | 164 (64%) | 161 (64%) |
-| Check-in, if everyone logged everything | 174 (61%) | 152 (67%) | 128 (74%) | 104 (85%) | 60 (97%) |
+| Check-in, if everyone logged everything | 174 (61%) | 148 (68%) | 126 (74%) | 104 (85%) | 60 (96%) |
 
 Week 1 has too little data, so the check-in shows the formula. What else the study found:
 
-- **The energy per kg matters.** With a flat 7,700 calories per kg the week 4 error is 137
+- **The energy per kg matters.** With a flat 7,700 calories per kg the week 4 error is 134
   instead of 119, so the app uses the body-based value for both the check-in and the plan.
 - **The carry-over correction and the 35-day window help.** The first version (28 days, no
   correction) had a week 4 error of 130 and a week 6 error of 89.
-- **The log alone is not enough early on.** Without the formula mix the week 2 error is 377,
+- **The log alone is not enough early on.** Without the formula mix the week 2 error is 376,
   worse than the formula, mostly because of the early water drop.
-- **It follows real change.** When everyone's burn rises 12% on day 21, the error jumps to 173
-  at week 4 and is back to 88 by week 6.
-- **The weekly limit earns its place on messy logs.** A second run gives half the people a 3 to
-  7 day holiday (eating 20 to 50% more, few weigh-ins, little logged), most of them one or two
-  3 to 7 day gaps with no log while eating up to 20% more, and a forgotten meal on up to 15% of
-  normal days (all assumptions). Compared with no limit, the 200 a week limit cuts the worst
-  errors (90th percentile at week 4: 374 vs 403) and the check-ins that jump over 200 calories
-  more than the truth did (15% vs 19%). On clean logs it costs 2 calories at week 4. A tighter
-  100 limit does better on messy logs but worse on clean ones (week 4: 128 vs 119), and a real
-  300 calorie rise would take three weeks to show, so the app keeps 200. The settings search on
-  the separate seed ranks the limits in the same order
-  ([`sim/TUNING-MESSY.md`](sim/TUNING-MESSY.md)).
-- **Messy logs still read low.** With holidays, gaps and forgotten meals the week 6 error is 132
-  instead of 74, and the estimate is about 90 calories too low on average. The weight gained on
-  days that were not logged (or logged in part) is put down to the days that were. The check-in
-  does not yet spot gaps or part days; that is the next thing to fix.
+- **It follows real change.** When everyone's burn rises 12% on day 21, the error jumps to 157
+  at week 4 and is back to 86 by week 6.
+- **Messy logs.** A second run gives half the people a 3 to 7 day holiday (eating 20 to 50%
+  more, few weigh-ins, little logged), most of them one or two 3 to 7 day gaps with no log while
+  eating up to 20% more, and a forgotten meal on up to 15% of normal days (all assumptions).
+  Before the fixes above (leaving out forgotten-meal days, trusting patchy logs less) the
+  estimate read about 90 calories low, because weight gained on days that were not logged, or
+  logged in part, was put down to the days that were. With them:
+
+  | Messy logs | Week 4 | Week 6 | Week 6, 90th percentile | Average error, week 4 |
+  |---|---|---|---|---|
+  | Without the fixes | 142 | 132 | 352 | −92 |
+  | **The app** | **122** | **105** | **294** | **−39** |
+
+  On clean logs the fixes cost 6 calories at week 2 and nothing later (week 4: 119 either way).
+  Both were picked on the tuning seed ([`sim/TUNING-FIXES-MESSY.md`](sim/TUNING-FIXES-MESSY.md),
+  [`sim/TUNING-FIXES.md`](sim/TUNING-FIXES.md)), with the cut-off at half rather than 60% of
+  the usual day because it does almost as well and is safer for people who eat light on purpose.
+  Messy logs are still the hardest case: 105 at week 6 against 72 on clean logs.
+- **Splitting the log at gaps made it worse.** Fitting the weight line separately on each side of
+  a gap of 2 to 5 unlogged days, so weight gained during a holiday is not counted, raised the
+  error on clean and messy logs alike. After a holiday the extra water comes off fast, and a
+  fresh line through those days reads it as fat loss (the estimate turned too high). The app
+  does not do it.
+- **The weekly limit earns its place on messy logs.** Compared with no limit, the 200 a week
+  limit cuts the error on messy logs (week 4: 122 vs 127, 90th percentile 320 vs 333) and the
+  check-ins that jump over 200 calories more than the truth did (13% vs 17%), and costs 1 calorie
+  at week 4 on clean logs. A tighter 100 limit is a little better on messy logs by week 6 (100
+  vs 105) but worse on clean ones (81 vs 72), and a real 300 calorie rise would take three weeks to show, so the app
+  keeps 200. On the separate seed, limits of 150 and 200 tie on messy logs and both beat 100 and
+  no limit ([`sim/TUNING-MESSY.md`](sim/TUNING-MESSY.md)).
 - **It is not a measure of your metabolism.** Counted in real calories, an under-logger's
   estimate is low by about the share they leave out. That is intended: their targets are
   compared with their logged calories.
@@ -208,18 +230,19 @@ e2e/            Playwright tests, including axe accessibility scans
 
 ## Tests
 
-- **126 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the log
+- **130 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the log
   (dates across month ends and daylight saving, the trend after gaps, backup files), the chart, and the check-in (hand-worked
-  energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 35-day window, the weekly limit) and the
+  energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 35-day window, the weekly limit, forgotten-meal days, fasting
+  days, patchy logs, splitting at gaps) and the
   simulation (seeded random numbers, energy balance, the water drop, holidays, gaps and forgotten meals, repeatable results). Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
-- **44 end-to-end tests** (Playwright) on a desktop and a touch phone screen (86 runs; one
+- **46 end-to-end tests** (Playwright) on a desktop and a touch phone screen (90 runs; one
   test is mouse-only and one is touch-only), against the production build. They cover the full flow in both unit systems, every error message, unit
   switching, the goal pace, the calorie floor (and that it never goes above maintenance), the under-18 rule, pill rows on a 320 px phone, saved plans, returning visitors, broken saved
   data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, logging,
   editing and deleting days, backup export and import, the chart with the keyboard, the check-in (exact numbers checked
-  against a separate Python version, saving, the weekly limit, the link from the Plan tab, three tabs on a 320 px phone), and an
+  against a separate Python version, saving, the weekly limit, a forgotten-meal day, a patchy log, the link from the Plan tab, three tabs on a 320 px phone), and an
   [axe](https://github.com/dequelabs/axe-core) scan for WCAG 2.1 A and AA rules on every step,
   with and without errors showing, in light and dark mode.
 
@@ -252,7 +275,9 @@ npm run dev            # http://localhost:5173/macro-calculator/
   links to the latest one).
 - The check-in's accuracy is measured on simulated people only (see above), not real users.
 - Days with no food logged are left out of the check-in, but a gap where you ate more than
-  usual, or a day where a meal was not logged, still pulls the estimate low.
+  usual still pulls the estimate low (the page says so when under 70% of days are logged, and
+  the estimate leans on the formula). A forgotten meal is only caught when the day comes out
+  under half your usual; a smaller miss still counts.
 - The log is kept in this browser's local storage (a few hundred bytes a day, so years fit
   well under the browser's limit). Clearing site data deletes it, which is why there is an
   export button. There is no account or sync.
@@ -261,7 +286,7 @@ npm run dev            # http://localhost:5173/macro-calculator/
 
 ## Planned
 
-Spotting gaps and part-logged days in the check-in, importing daily totals from Cronometer and MyFitnessPal, and an installable offline app.
+Importing daily totals from Cronometer and MyFitnessPal, and an installable offline app.
 
 ## License
 
