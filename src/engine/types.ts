@@ -35,6 +35,8 @@ export interface MacroPlan {
     pace: number
     /** Expected change in body weight per week at the final target, negative for loss. */
     weeklyChangeKg: number
+    /** Calories in a kg of weight change for this body, used to turn the pace into calories. */
+    caloriesPerKg: number
     proteinPerKg: number
     referenceWeightKg: number
   }

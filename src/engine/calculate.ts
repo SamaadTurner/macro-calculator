@@ -1,4 +1,5 @@
 import type { Goal, MacroPlan, Person, Sex } from './types'
+import { caloriesPerKgChange } from './energy'
 
 /**
  * Lowest fat loss target the app suggests without a doctor or dietitian involved.
@@ -15,13 +16,6 @@ export const PROTEIN_G_PER_KG: Record<Goal, number> = { cutting: 2.2, maintain: 
 
 export const PROTEIN_MAX_SHARE = 0.4
 export const FAT_SHARE = 0.25
-
-/**
- * Energy in a kilogram of body weight lost or gained over weeks. Hall (2008) found the
- * simple 32.2 MJ/kg rule (about 7,700 calories) fits longer-term weight change reasonably
- * well, even though the first weeks of a diet lose more water and so less energy per kg.
- */
-export const CALORIES_PER_KG = 7700
 
 /**
  * Goal paces as a share of body weight per week. Fat loss: 0.5 to 1% a week keeps
@@ -84,7 +78,7 @@ export function goalAdjustment(
   maintenance: number,
   weightKg: number,
   pace: number,
-  caloriesPerKg = CALORIES_PER_KG,
+  caloriesPerKg: number,
 ): { calories: number; capped: boolean } {
   if (goal === 'maintain') return { calories: 0, capped: false }
   const fromPace = (weightKg * pace * caloriesPerKg) / 7
@@ -94,9 +88,8 @@ export function goalAdjustment(
 }
 
 /**
- * The weekly check-in passes the maintenance it measured from the log, and the energy per kg
- * for this person, instead of the formula and the 7,700 rule. Everything else (caps, floor,
- * macro split) stays the same.
+ * The weekly check-in passes the maintenance it measured from the log (and the energy per kg it
+ * used) instead of the formula. Everything else (caps, floor, macro split) stays the same.
  */
 export interface PlanOptions {
   maintenance?: number
@@ -105,7 +98,8 @@ export interface PlanOptions {
 
 export function calculatePlan(person: Person, options: PlanOptions = {}): MacroPlan {
   const notes: string[] = []
-  const caloriesPerKg = options.caloriesPerKg ?? CALORIES_PER_KG
+  // A kg of weight change holds fewer calories for leaner people, who lose more lean tissue per kg (Hall 2008, Forbes).
+  const caloriesPerKg = options.caloriesPerKg ?? caloriesPerKgChange(person.weightKg, person.heightCm, person.age, person.sex)
   const bmr = calculateBmr(person.weightKg, person.heightCm, person.age, person.sex)
   const maintenance = options.maintenance ?? bmr * person.activity
   const pace = paceFor(person.goal, person.pace)
@@ -176,6 +170,7 @@ export function calculatePlan(person: Person, options: PlanOptions = {}): MacroP
       pace,
       // What the final target works out to in body weight per week, after any cap or floor.
       weeklyChangeKg: (finalAdjustment * 7) / caloriesPerKg,
+      caloriesPerKg: Math.round(caloriesPerKg),
       proteinPerKg,
       referenceWeightKg: Math.round(referenceWeightKg * 10) / 10,
     },

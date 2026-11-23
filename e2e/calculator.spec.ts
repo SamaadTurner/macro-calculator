@@ -7,17 +7,17 @@ test.beforeEach(async ({ page }) => {
 
 test('a full run gives the expected plan', async ({ page }) => {
   await answerAll(page, averageMan)
-  // Maintenance 2,763 minus 449 (0.5% of 180 lb a week at 7,700 calories per kg)
-  await expect(calories(page)).toHaveText('2,314')
+  // Maintenance 2,763 minus 386 (0.5% of 180 lb a week at 6,620 calories per kg for this body)
+  await expect(calories(page)).toHaveText('2,377')
   await expect(page.getByText('Maintenance is about 2,763')).toBeVisible()
   await expect(page.getByTestId('macro-protein')).toContainText('174g')
-  await expect(page.getByTestId('macro-carbs')).toContainText('261g')
-  await expect(page.getByTestId('macro-fats')).toContainText('64g')
+  await expect(page.getByTestId('macro-carbs')).toContainText('272g')
+  await expect(page.getByTestId('macro-fats')).toContainText('66g')
 })
 
 test('metric gives the same result as imperial', async ({ page }) => {
   await answerAll(page, { ...averageMan, unit: 'metric', weight: '81.6466', cm: '177.8' })
-  await expect(calories(page)).toHaveText('2,314')
+  await expect(calories(page)).toHaveText('2,377')
 })
 
 test('pressing Continue on an empty step shows every message and focuses the first field', async ({ page }) => {
@@ -142,23 +142,23 @@ test('the pace changes the target and the expected weekly change', async ({ page
   await expect(page.getByTestId('weekly-change')).toHaveText('Losing about 0.9 lb a week')
   await expect(page.getByText('0.5% a week, the usual choice')).toBeVisible()
 
-  // 1% would be 898 a day; the deficit is capped at 25% of 2,763 = 691
+  // 1% would be 772 a day; the deficit is capped at 25% of 2,763 = 691
   await pick(page, 'Fastest')
   await expect(calories(page)).toHaveText('2,072')
   await expect(page.getByText(/capped there/)).toBeVisible()
-  await expect(page.getByTestId('weekly-change')).toHaveText('Losing about 1.4 lb a week')
+  await expect(page.getByTestId('weekly-change')).toHaveText('Losing about 1.6 lb a week')
 
   await pick(page, 'Gentle')
-  // 81.65 x 0.25% x 1,100 = 224.5
-  await expect(calories(page)).toHaveText('2,539')
+  // 81.65 x 0.25% x 6,620 / 7 = 193
+  await expect(calories(page)).toHaveText('2,570')
 
   // A new goal starts from its own default pace, and the pace is kept after a reload.
   await pick(page, 'Bulk')
   await expect(page.getByRole('radio', { name: 'Lean' })).toBeChecked()
   await pick(page, 'Faster')
-  await expect(calories(page)).toHaveText('3,212')
+  await expect(calories(page)).toHaveText('3,149')
   await page.reload()
-  await expect(calories(page)).toHaveText('3,212')
+  await expect(calories(page)).toHaveText('3,149')
   await expect(page.getByTestId('weekly-change')).toHaveText('Gaining about 0.9 lb a week')
 })
 
@@ -170,13 +170,13 @@ test('the pace can be picked on the goal step', async ({ page }) => {
   await pick(page, 'Lose fat')
   await pick(page, 'Gentle')
   await continueButton(page).click()
-  await expect(calories(page)).toHaveText('2,539')
+  await expect(calories(page)).toHaveText('2,570')
 })
 
 test('switching goal on the results page updates the numbers', async ({ page }) => {
   await answerAll(page, averageMan)
   await pick(page, 'Bulk')
-  await expect(calories(page)).toHaveText('2,988')
+  await expect(calories(page)).toHaveText('2,956')
   await pick(page, 'Maintain')
   await expect(calories(page)).toHaveText('2,763')
 })
@@ -193,7 +193,7 @@ test('the per-meal table follows the number of meals', async ({ page }) => {
 test('a returning visitor lands on their results, and Start over clears them', async ({ page }) => {
   await answerAll(page, averageMan)
   await page.reload()
-  await expect(calories(page)).toHaveText('2,314')
+  await expect(calories(page)).toHaveText('2,377')
 
   await page.getByRole('button', { name: 'Start over' }).click()
   await expect(page.getByText('Step 1 of 4')).toBeVisible()
@@ -215,7 +215,7 @@ test('plans can be saved and deleted', async ({ page }) => {
   await expect(page.getByRole('status')).toHaveText('Plan saved on this device')
   const saved = page.locator('.saved-item')
   await expect(saved).toHaveCount(1)
-  await expect(saved).toContainText('2,314 cal')
+  await expect(saved).toContainText('2,377 cal')
 
   await page.reload()
   await expect(saved).toHaveCount(1)
@@ -231,7 +231,7 @@ test('broken saved data does not break the page', async ({ page }) => {
   await page.reload()
   await expect(page.getByText('Step 1 of 4')).toBeVisible()
   await answerAll(page, averageMan)
-  await expect(calories(page)).toHaveText('2,314')
+  await expect(calories(page)).toHaveText('2,377')
 })
 
 test('choices work with the keyboard', async ({ page }) => {

@@ -14,6 +14,7 @@ import {
 } from './calculate'
 import type { Goal, Person, Sex } from './types'
 import { feetInchesToCm, lbToKg } from './units'
+import { LEAN_CALORIES_PER_KG } from './energy'
 
 const average: Person = {
   age: 30,
@@ -38,18 +39,18 @@ describe('calculateBmr', () => {
 })
 
 describe('paces', () => {
-  it('turns a pace into calories at 7,700 per kg', () => {
-    // 80 kg x 0.5% = 0.4 kg a week = 3,080 calories a week = 440 a day
-    expect(goalAdjustment('cutting', 2800, 80, 0.005)).toEqual({ calories: -440, capped: false })
-    // 80 kg x 0.25% = 0.2 kg a week = 220 a day
-    expect(goalAdjustment('bulking', 2800, 80, 0.0025)).toEqual({ calories: 220, capped: false })
-    expect(goalAdjustment('maintain', 2800, 80, 0)).toEqual({ calories: 0, capped: false })
+  it('turns a pace into calories at the given energy per kg', () => {
+    // 80 kg x 0.5% = 0.4 kg a week = 2,800 calories a week at 7,000 per kg = 400 a day
+    expect(goalAdjustment('cutting', 2800, 80, 0.005, 7000)).toEqual({ calories: -400, capped: false })
+    // 80 kg x 0.25% = 0.2 kg a week = 200 a day
+    expect(goalAdjustment('bulking', 2800, 80, 0.0025, 7000)).toEqual({ calories: 200, capped: false })
+    expect(goalAdjustment('maintain', 2800, 80, 0, 7000)).toEqual({ calories: 0, capped: false })
   })
 
   it('caps the deficit at 25% and the surplus at 20% of maintenance', () => {
-    // 160 kg x 1% would be 1,760 a day
-    expect(goalAdjustment('cutting', 3000, 160, 0.01)).toEqual({ calories: -750, capped: true })
-    expect(goalAdjustment('bulking', 3000, 160, 0.005)).toEqual({ calories: 600, capped: true })
+    // 160 kg x 1% at 7,000 per kg would be 1,600 a day
+    expect(goalAdjustment('cutting', 3000, 160, 0.01, 7000)).toEqual({ calories: -750, capped: true })
+    expect(goalAdjustment('bulking', 3000, 160, 0.005, 7000)).toEqual({ calories: 600, capped: true })
   })
 
   it('falls back to the default for a pace the goal does not offer', () => {
@@ -75,27 +76,28 @@ describe('worked examples', () => {
   })
 
   it('average man losing fat at the steady pace', () => {
-    // Deficit = 81.65 kg x 0.5% x 7,700 / 7 = 449.1; 2763.2 - 449.1 = 2314
-    // BMI 25.8, so protein uses the BMI 25 weight: 25 x 1.778^2 = 79.03 kg x 2.2 = 174 g
-    // Fat = 2314 x 25% / 9 = 64 g; carbs = (2314 - 696 - 576) / 4 = 261 g
+    // Energy per kg for this body: 6,620 (see the check-in tests). Deficit = 81.65 kg x 0.5% x 6,620 / 7 = 386.1;
+    // 2763.2 - 386.1 = 2377. BMI 25.8, so protein uses the BMI 25 weight: 25 x 1.778^2 = 79.03 kg x 2.2 = 174 g.
+    // Fat = 2377 x 25% / 9 = 66 g; carbs = (2377 - 696 - 594) / 4 = 272 g
     const plan = calculatePlan({ ...average, goal: 'cutting' })
-    expect(plan.calories).toBe(2314)
+    expect(plan.calories).toBe(2377)
     expect(plan.protein.grams).toBe(174)
-    expect(plan.fats.grams).toBe(64)
-    expect(plan.carbs.grams).toBe(261)
+    expect(plan.fats.grams).toBe(66)
+    expect(plan.carbs.grams).toBe(272)
+    expect(plan.breakdown.caloriesPerKg).toBe(6620)
     expect(plan.breakdown.weeklyChangeKg).toBeCloseTo(-0.408, 3)
   })
 
   it('average man building muscle at the lean pace', () => {
-    // Surplus = 81.65 x 0.25% x 1,100 = 224.5; 2763.2 + 224.5 = 2988
+    // Surplus = 81.65 x 0.25% x 6,620 / 7 = 193.0; 2763.2 + 193.0 = 2956
     const plan = calculatePlan({ ...average, goal: 'bulking' })
-    expect(plan.calories).toBe(2988)
+    expect(plan.calories).toBe(2956)
     expect(plan.breakdown.pace).toBe(0.0025)
   })
 
   it('woman at the floor: maintenance above 1,200, fast pace', () => {
     // 60 y, 50 kg, 155 cm, mostly sitting: BMR 1007.75, maintenance 1209.3.
-    // 1% pace = 550 a day, capped at 25% = 302.3, so 907 before the floor; raised to 1,200.
+    // 1% pace = 50 x 1% x 6,513 / 7 = 465 a day, capped at 25% = 302.3, so 907 before the floor; raised to 1,200.
     const plan = calculatePlan({ age: 60, sex: 'female', weightKg: 50, heightCm: 155, activity: 1.2, goal: 'cutting', pace: 0.01 })
     expect(plan.calories).toBe(1200)
     expect(plan.notes.some(note => /capped/.test(note))).toBe(true)
@@ -110,16 +112,16 @@ describe('worked examples', () => {
     expect(cut.calories).toBe(992)
     expect(cut.notes[0]).toMatch(/maintenance is below 1,200/)
     expect(calculatePlan({ ...person, goal: 'maintain' }).calories).toBe(992)
-    // A bulk adds its surplus to maintenance and ignores the floor: 45 x 0.25% x 1,100 = 123.75
-    expect(calculatePlan({ ...person, goal: 'bulking' }).calories).toBe(1116)
+    // A bulk adds its surplus to maintenance and ignores the floor: 45 x 0.25% x 6,509 / 7 = 104.6
+    expect(calculatePlan({ ...person, goal: 'bulking' }).calories).toBe(1096)
   })
 
   it('caps a fast cut for a large body', () => {
     // 30 y man, 160 kg, 190 cm, mostly sitting: BMR 2642.5, maintenance 3171.
-    // 1% = 1,760 a day, capped at 25% = 792.75 -> 2378
+    // Energy per kg 8,457 (more body fat). 1% = 160 x 1% x 8,457 / 7 = 1,933 a day, capped at 25% = 792.75 -> 2378
     const plan = calculatePlan({ age: 30, sex: 'male', weightKg: 160, heightCm: 190, activity: 1.2, goal: 'cutting', pace: 0.01 })
     expect(plan.calories).toBe(2378)
-    expect(plan.breakdown.weeklyChangeKg).toBeCloseTo((-793 * 7) / 7700, 3)
+    expect(plan.breakdown.weeklyChangeKg).toBeCloseTo(-0.6564, 3)
   })
 
   it('adds a note under 18', () => {
@@ -210,8 +212,8 @@ describe('every body, goal and pace', () => {
 
   it('never moves weight faster than the chosen pace', () => {
     for (const { person, plan } of plans) {
-      // One calorie of rounding is allowed for.
-      const limitKg = (person.weightKg * (person.pace ?? 0)) + 7 / 7700
+      // One calorie of rounding is allowed for, at the smallest possible energy per kg.
+      const limitKg = person.weightKg * (person.pace ?? 0) + 7 / LEAN_CALORIES_PER_KG
       expect(Math.abs(plan.breakdown.weeklyChangeKg), label(person)).toBeLessThanOrEqual(limitKg)
     }
   })

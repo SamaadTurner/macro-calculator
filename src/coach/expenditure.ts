@@ -11,8 +11,11 @@ import type { LogEntry } from '../log/entries'
 // cooking oil every day gets an estimate in their own logged calories, which is what their
 // targets are compared against anyway.
 
-/** The last 4 weeks are used. Long enough to average out water swings, short enough to follow change. */
-export const WINDOW_DAYS = 28
+/**
+ * The last 5 weeks are used. Long enough to average out water swings, short enough to follow a
+ * real change (in the simulation study, 35 days beat 28 and still caught up with a 12% rise in burn).
+ */
+export const WINDOW_DAYS = 35
 /** Before an estimate is shown: weigh-ins at least this many days apart... */
 export const MIN_SPAN_DAYS = 10
 /** ...this many weigh-ins... */
@@ -30,10 +33,39 @@ export const FORMULA_SHARE_SD = 0.15
  * a few weigh-ins happen to line up, so a short, tidy log is not trusted too much.
  */
 export const MIN_WEIGHT_NOISE_KG = 0.4
+/**
+ * Scale water carries over from one day to the next, so weigh-ins are not independent and the
+ * plain standard error of the line is too small. With day-to-day carry-over of about 0.5 the
+ * usual correction is sqrt((1 + 0.5) / (1 - 0.5)) = 1.73. The simulation study picked it too.
+ */
+export const SLOPE_SE_FACTOR = 1.73
 /** The estimate moves at most this much per week between saved check-ins. */
 export const MAX_CHANGE_PER_WEEK = 200
 /** A data estimate this far from the formula (as a share) gets a "check your logging" note. */
 export const UNUSUAL_SHARE = 0.35
+
+/** The tuning numbers above in one object, so the simulation study can try other values. */
+export interface EstimatorSettings {
+  windowDays: number
+  minSpanDays: number
+  minWeighIns: number
+  minIntakeDays: number
+  formulaShareSd: number
+  minWeightNoiseKg: number
+  maxChangePerWeek: number
+  slopeSeFactor: number
+}
+
+export const DEFAULT_SETTINGS: EstimatorSettings = {
+  windowDays: WINDOW_DAYS,
+  minSpanDays: MIN_SPAN_DAYS,
+  minWeighIns: MIN_WEIGH_INS,
+  minIntakeDays: MIN_INTAKE_DAYS,
+  formulaShareSd: FORMULA_SHARE_SD,
+  minWeightNoiseKg: MIN_WEIGHT_NOISE_KG,
+  maxChangePerWeek: MAX_CHANGE_PER_WEEK,
+  slopeSeFactor: SLOPE_SE_FACTOR,
+}
 
 export interface ExpenditureInput {
   /** Sorted, one per date. */
@@ -44,6 +76,7 @@ export interface ExpenditureInput {
   caloriesPerKg: number
   /** The last saved check-in, used to limit how fast the estimate moves. */
   previous?: { date: string; expenditure: number }
+  settings?: EstimatorSettings
 }
 
 export interface MissingData {
@@ -86,7 +119,7 @@ interface Line {
 }
 
 /** Least-squares line through (day, weight). Missed weigh-ins need no filling: the line simply spans them. */
-function fitLine(days: number[], weights: number[]): Line {
+function fitLine(days: number[], weights: number[], minNoiseKg: number): Line {
   const n = days.length
   const meanX = days.reduce((sum, x) => sum + x, 0) / n
   const meanY = weights.reduce((sum, y) => sum + y, 0) / n
@@ -102,7 +135,7 @@ function fitLine(days: number[], weights: number[]): Line {
     const fitted = meanY + slope * (days[i] - meanX)
     squaredResiduals += (weights[i] - fitted) ** 2
   }
-  const noise = Math.max(MIN_WEIGHT_NOISE_KG, Math.sqrt(squaredResiduals / (n - 2)))
+  const noise = Math.max(minNoiseKg, Math.sqrt(squaredResiduals / (n - 2)))
   return { slope, slopeSe: noise / Math.sqrt(sxx) }
 }
 
@@ -117,7 +150,8 @@ function sampleVariance(values: number[]): number {
 
 export function estimateExpenditure(input: ExpenditureInput): ExpenditureResult {
   const { entries, today, formulaMaintenance, caloriesPerKg, previous } = input
-  const start = addDays(today, -(WINDOW_DAYS - 1))
+  const settings = input.settings ?? DEFAULT_SETTINGS
+  const start = addDays(today, -(settings.windowDays - 1))
   const inWindow = entries.filter(entry => entry.date >= start && entry.date <= today)
   const weighIns = inWindow.filter((entry): entry is LogEntry & { weightKg: number } => entry.weightKg !== undefined)
   const first = weighIns[0]?.date
@@ -127,7 +161,7 @@ export function estimateExpenditure(input: ExpenditureInput): ExpenditureResult 
     first && last ? inWindow.filter(entry => entry.date >= first && entry.date < last && entry.calories !== undefined).map(entry => entry.calories as number) : []
 
   const have: MissingData = { spanDays: first && last ? daysBetween(first, last) : 0, weighIns: weighIns.length, intakeDays: intake.length }
-  const need: MissingData = { spanDays: MIN_SPAN_DAYS, weighIns: MIN_WEIGH_INS, intakeDays: MIN_INTAKE_DAYS }
+  const need: MissingData = { spanDays: settings.minSpanDays, weighIns: settings.minWeighIns, intakeDays: settings.minIntakeDays }
   if (have.spanDays < need.spanDays || have.weighIns < need.weighIns || have.intakeDays < need.intakeDays || !first || !last) {
     return { status: 'not-enough', have, need }
   }
@@ -135,14 +169,15 @@ export function estimateExpenditure(input: ExpenditureInput): ExpenditureResult 
   const line = fitLine(
     weighIns.map(entry => daysBetween(first, entry.date)),
     weighIns.map(entry => entry.weightKg),
+    settings.minWeightNoiseKg,
   )
   const averageIntake = mean(intake)
   const fromData = averageIntake - line.slope * caloriesPerKg
 
   // Mix the formula and the data, each weighted by how sure it is (one over its variance).
   // A short or noisy log leans on the formula; after 3 to 4 weeks the data does most of the work.
-  const dataVariance = (caloriesPerKg * line.slopeSe) ** 2 + sampleVariance(intake) / intake.length
-  const formulaVariance = (FORMULA_SHARE_SD * formulaMaintenance) ** 2
+  const dataVariance = (caloriesPerKg * line.slopeSe * settings.slopeSeFactor) ** 2 + sampleVariance(intake) / intake.length
+  const formulaVariance = (settings.formulaShareSd * formulaMaintenance) ** 2
   const dataWeight = formulaVariance / (formulaVariance + dataVariance)
   const blended = dataWeight * fromData + (1 - dataWeight) * formulaMaintenance
   const blendedSd = Math.sqrt((dataVariance * formulaVariance) / (dataVariance + formulaVariance))
@@ -151,7 +186,7 @@ export function estimateExpenditure(input: ExpenditureInput): ExpenditureResult 
   let limited = false
   if (previous && previous.date < today) {
     const weeks = Math.max(1, daysBetween(previous.date, today) / 7)
-    const limit = MAX_CHANGE_PER_WEEK * weeks
+    const limit = settings.maxChangePerWeek * weeks
     const clamped = Math.min(previous.expenditure + limit, Math.max(previous.expenditure - limit, blended))
     limited = clamped !== blended
     expenditure = clamped

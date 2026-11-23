@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { caloriesPerKgChange, estimateBodyFatPct, FAT_CALORIES_PER_KG, fatShareOfChange, LEAN_CALORIES_PER_KG } from './energy'
+import { caloriesPerKgChange, estimateBodyFatPct, FAT_CALORIES_PER_KG, fatShareOfChange, LEAN_CALORIES_PER_KG } from '../engine/energy'
 import { estimateExpenditure, MAX_CHANGE_PER_WEEK, MIN_INTAKE_DAYS, MIN_SPAN_DAYS, MIN_WEIGH_INS } from './expenditure'
 import type { ExpenditureInput } from './expenditure'
 import { loadCheckIns, previousCheckIn, saveCheckIn } from './checkins'
@@ -87,9 +87,9 @@ describe('expenditure estimate', () => {
     expect(result.weeklyChangeKg).toBeCloseTo(-0.5, 6)
     expect(result.averageIntake).toBe(2000)
     expect(result.fromData).toBeCloseTo(2472.86, 1)
-    expect(result.dataWeight).toBeCloseTo(0.97714, 4)
-    expect(result.expenditure).toBeCloseTo(2478.05, 1)
-    expect(result.high - result.expenditure).toBeCloseTo(1.96 * 61.239, 1)
+    expect(result.dataWeight).toBeCloseTo(0.93455, 4)
+    expect(result.expenditure).toBeCloseTo(2487.73, 1)
+    expect(result.high - result.expenditure).toBeCloseTo(1.96 * 103.61, 1)
     expect(result.start).toBe(addDays(TODAY, -27))
     expect(result.end).toBe(TODAY)
     expect(result.limited).toBe(false)
@@ -137,8 +137,8 @@ describe('expenditure estimate', () => {
     expect(result.intakeDays).toBe(27)
   })
 
-  it('only uses the last 28 days', () => {
-    const old = makeLog(60, day => (day < 32 ? 100 : 80), day => (day < 32 ? 5000 : 2200))
+  it('only uses the last 35 days', () => {
+    const old = makeLog(60, day => (day < 25 ? 100 : 80), day => (day < 25 ? 5000 : 2200))
     const result = estimateExpenditure(input(old))
     if (result.status !== 'ready') throw new Error('expected an estimate')
     expect(result.averageIntake).toBe(2200)

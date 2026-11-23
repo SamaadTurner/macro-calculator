@@ -5,7 +5,7 @@ import { kgToLb, roundTo } from '../engine/units'
 import { addDays, daysBetween, formatDay, todayIso } from '../log/dates'
 import { loadLog } from '../log/entries'
 import { weightTrend } from '../log/trend'
-import { caloriesPerKgChange } from '../coach/energy'
+import { caloriesPerKgChange } from '../engine/energy'
 import { estimateExpenditure } from '../coach/expenditure'
 import type { ExpenditureResult } from '../coach/expenditure'
 import { CHECK_IN_EVERY_DAYS, loadCheckIns, previousCheckIn, saveCheckIn } from '../coach/checkins'
@@ -47,7 +47,7 @@ function NotEnoughData({ result, formula }: { result: Extract<ExpenditureResult,
         Log your morning weight and the day&apos;s calories for about two weeks. Then the check-in compares the two and works out what you really burn.
         Until then, your plan uses the formula: about <strong>{cal(round10(formula))}</strong> calories a day to maintain.
       </p>
-      <ul className="checklist" aria-label="What the first check-in needs, from the last 4 weeks">
+      <ul className="checklist" aria-label="What the first check-in needs, from the last 5 weeks">
         {rows.map(row => {
           const done = row.have >= row.need
           return (
@@ -324,7 +324,7 @@ function Ready({ result, current, planCalories, comparedWith, unit, savedToday, 
           Burn = average calories eaten minus the change in stored energy. A kg of weight change holds about 9,400 calories if it is fat and 1,800 if it is lean
           tissue and water (Hall, 2008); how much of yours is fat is estimated from your BMI, age and sex (Deurenberg, 1991; Forbes, 2000). Days with no calories
           are left out, not counted as zero, and missed weigh-ins are fine. The log and the formula are mixed by how certain each one is, so early on the formula
-          counts more. It uses what you ate, not what you planned, and the last 4 weeks only.
+          counts more. It uses what you ate, not what you planned, and the last 5 weeks only.
         </p>
       </details>
     </>
