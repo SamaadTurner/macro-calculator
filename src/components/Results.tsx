@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import type { Goal, MacroPlan } from '../engine/types'
+import type { Goal, MacroPlan, UnitSystem } from '../engine/types'
+import { kgToLb, roundTo } from '../engine/units'
 import { splitAcrossMeals } from '../engine/calculate'
 import type { SavedPlan } from '../storage'
 import { Choice } from './fields'
 import { MacroRing, MACROS } from './MacroRing'
 import { AlertIcon, TrashIcon } from './Icons'
-import { GOAL_OPTIONS } from './Wizard'
+import { GOAL_OPTIONS, paceHint, paceOptions } from './Wizard'
 
 const GOAL_LABELS: Record<string, string> = { cutting: 'Lose fat', maintain: 'Maintain', bulking: 'Build muscle' }
 const MEAL_OPTIONS = [3, 4, 5, 6].map(n => ({ value: n, label: String(n) }))
@@ -13,15 +14,25 @@ const MEAL_OPTIONS = [3, 4, 5, 6].map(n => ({ value: n, label: String(n) }))
 interface ResultsProps {
   plan: MacroPlan
   goal: Goal
+  pace: number | null
+  unit: UnitSystem
   savedPlans: SavedPlan[]
   canShare: boolean
   onGoalChange: (goal: Goal) => void
+  onPaceChange: (pace: number) => void
   onEdit: () => void
   onStartOver: () => void
   onSave: () => void
   onCopy: () => void
   onShare: () => void
   onDeletePlan: (id: string) => void
+}
+
+/** "About 0.9 lb a week" in the user's unit, or '' at maintenance. */
+export function weeklyChangeText(weeklyChangeKg: number, unit: UnitSystem): string {
+  const amount = roundTo(Math.abs(unit === 'imperial' ? kgToLb(weeklyChangeKg) : weeklyChangeKg), 1)
+  if (amount === 0) return ''
+  return `${weeklyChangeKg < 0 ? 'Losing' : 'Gaining'} about ${amount} ${unit === 'imperial' ? 'lb' : 'kg'} a week`
 }
 
 export function planAsText(plan: MacroPlan, goal: string): string {
@@ -47,6 +58,12 @@ export function Results(props: ResultsProps) {
         </h1>
         <p className="lede">
           Maintenance is about <strong>{plan.breakdown.maintenance.toLocaleString('en-US')}</strong> calories a day.
+          {weeklyChangeText(plan.breakdown.weeklyChangeKg, props.unit) ? (
+            <>
+              {' '}
+              <span data-testid="weekly-change">{weeklyChangeText(plan.breakdown.weeklyChangeKg, props.unit)}</span> at this target.
+            </>
+          ) : null}
         </p>
       </div>
 
@@ -72,6 +89,19 @@ export function Results(props: ResultsProps) {
           value={props.goal}
           onChange={props.onGoalChange}
         />
+        {props.goal !== 'maintain' ? (
+          <div className="pace-choice">
+            <Choice
+              legend="Pace"
+              name="results-pace"
+              variant="segmented"
+              options={paceOptions(props.goal)}
+              value={plan.breakdown.pace}
+              onChange={props.onPaceChange}
+              hint={paceHint(props.goal, props.pace)}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="card">
@@ -137,7 +167,7 @@ export function Results(props: ResultsProps) {
             <dd>{plan.breakdown.maintenance.toLocaleString('en-US')} cal</dd>
           </div>
           <div>
-            <dt>Goal adjustment</dt>
+            <dt>Goal adjustment{props.goal !== 'maintain' ? ` (${roundTo(plan.breakdown.pace * 100, 2)}% of body weight a week)` : ''}</dt>
             <dd>{signedAdjustment} cal</dd>
           </div>
           <div className="breakdown-total">
@@ -160,7 +190,9 @@ export function Results(props: ResultsProps) {
           </div>
         </dl>
         <p className="fine-print">
-          A fat loss target cuts 20% of maintenance, at most 500 calories. Above a BMI of 25, protein uses the weight at BMI 25 for your height, because total weight
+          The pace turns into calories at about 7,700 calories per kg of body weight (Hall, 2008), with the deficit capped at 25% of maintenance and the
+          surplus at 20%. Fat loss paces follow Helms et al. (2014), muscle gain paces Iraki et al. (2019). Fat loss never goes below 1,200 calories for
+          women or 1,500 for men, a common rule of thumb, or above maintenance. Above a BMI of 25, protein uses the weight at BMI 25 for your height, because total weight
           overstates muscle. Protein research: Morton et al., 2018.
         </p>
       </details>

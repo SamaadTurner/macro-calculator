@@ -1042,6 +1042,26 @@ a {
   font-size: 0.8125rem;
 }
 
+/* The pace row sits under the goal choice. */
+.pace-choice {
+  margin-top: 20px;
+}
+
+/* Four words in one row: size each by its label so none spills out. */
+.pace-choice .choice-segmented .choice-option {
+  flex: 1 0 auto;
+  padding: 0 10px;
+}
+
+/* On a narrow phone the paces do not fit in one row, so they go two by two. */
+@media (max-width: 400px) {
+  .pace-choice .choice-segmented .choice-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-radius: var(--radius-md);
+  }
+}
+
 /* ==========================================================================
    Daily log
    ========================================================================== */

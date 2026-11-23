@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Dispatch, FormEvent } from 'react'
 import type { FieldErrors, FormAction, FormState, StepId } from '../form'
 import { STEPS, stepErrors } from '../form'
-import { ACTIVITY_LEVELS } from '../engine/calculate'
+import { ACTIVITY_LEVELS, BULK_PACES, CUT_PACES, paceFor } from '../engine/calculate'
 import type { Goal, Sex, UnitSystem } from '../engine/types'
 import { Choice, FieldError, NumberField } from './fields'
 import { ArrowLeftIcon, ArrowRightIcon, BalanceIcon, DumbbellIcon, FlameIcon } from './Icons'
@@ -10,7 +10,10 @@ import { ArrowLeftIcon, ArrowRightIcon, BalanceIcon, DumbbellIcon, FlameIcon } f
 const STEP_TITLES: Record<StepId, { title: string; subtitle: string }> = {
   about: { title: 'About you', subtitle: 'Used only for the calorie formula.' },
   body: { title: 'Your body', subtitle: 'Today\'s weight is fine. You can update it any time.' },
-  activity: { title: 'How active are you?', subtitle: 'Pick the closest match. Most people who lift 3 to 4 times a week are "Active".' },
+  activity: {
+    title: 'How active are you?',
+    subtitle: 'Count your job and your training. If you sit at work and lift 3 or 4 days a week, start with Lightly active or Active, and pick the lower one if unsure.',
+  },
   goal: { title: 'What\'s the goal?', subtitle: 'You can switch goals later and see the new numbers right away.' },
 }
 
@@ -30,6 +33,18 @@ export const GOAL_OPTIONS = [
   { value: 'maintain' as Goal, label: 'Maintain', short: 'Maintain', detail: 'Eat at maintenance, build strength, recomp slowly', icon: <BalanceIcon /> },
   { value: 'bulking' as Goal, label: 'Build muscle', short: 'Bulk', detail: 'A small surplus for lean gains', icon: <DumbbellIcon /> },
 ]
+
+export function paceOptions(goal: Goal) {
+  const paces = goal === 'cutting' ? CUT_PACES : BULK_PACES
+  return paces.map(pace => ({ value: pace.value as number, label: pace.label }))
+}
+
+/** The detail line for the chosen pace, like "0.5% a week, the usual choice". */
+export function paceHint(goal: Goal, pace: number | null): string {
+  const paces: readonly { value: number; detail: string }[] = goal === 'cutting' ? CUT_PACES : BULK_PACES
+  const chosen = paceFor(goal, pace ?? undefined)
+  return paces.find(option => option.value === chosen)?.detail ?? ''
+}
 
 const ACTIVITY_OPTIONS = ACTIVITY_LEVELS.map(level => ({ value: level.value, label: level.label, detail: level.detail }))
 
@@ -183,6 +198,20 @@ export function Wizard({ form, dispatch, initialStep, onFinish }: WizardProps) {
             onChange={value => dispatch({ type: 'set', field: 'goal', value })}
             error={errors.goal}
           />
+        ) : null}
+
+        {step === 'goal' && (form.goal === 'cutting' || form.goal === 'bulking') ? (
+          <div className="pace-choice">
+            <Choice
+              legend={form.goal === 'cutting' ? 'How fast do you want to lose?' : 'How fast do you want to gain?'}
+              name="pace"
+              variant="segmented"
+              options={paceOptions(form.goal)}
+              value={paceFor(form.goal, form.pace ?? undefined)}
+              onChange={value => dispatch({ type: 'set', field: 'pace', value })}
+              hint={paceHint(form.goal, form.pace)}
+            />
+          </div>
         ) : null}
 
         <div className="step-actions">

@@ -127,9 +127,12 @@ export default function App() {
           <Results
             plan={plan}
             goal={form.goal as Goal}
+            pace={form.pace}
+            unit={form.unit}
             savedPlans={savedPlans}
             canShare={typeof navigator.share === 'function'}
             onGoalChange={changeGoal}
+            onPaceChange={pace => dispatch({ type: 'set', field: 'pace', value: pace })}
             onEdit={() => setView({ name: 'steps', step: 0 })}
             onStartOver={startOver}
             onSave={handleSave}

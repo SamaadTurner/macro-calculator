@@ -7,17 +7,17 @@ test.beforeEach(async ({ page }) => {
 
 test('a full run gives the expected plan', async ({ page }) => {
   await answerAll(page, averageMan)
-  // Maintenance 2,763 minus 500 for fat loss
-  await expect(calories(page)).toHaveText('2,263')
+  // Maintenance 2,763 minus 449 (0.5% of 180 lb a week at 7,700 calories per kg)
+  await expect(calories(page)).toHaveText('2,314')
   await expect(page.getByText('Maintenance is about 2,763')).toBeVisible()
   await expect(page.getByTestId('macro-protein')).toContainText('174g')
-  await expect(page.getByTestId('macro-carbs')).toContainText('250g')
-  await expect(page.getByTestId('macro-fats')).toContainText('63g')
+  await expect(page.getByTestId('macro-carbs')).toContainText('261g')
+  await expect(page.getByTestId('macro-fats')).toContainText('64g')
 })
 
 test('metric gives the same result as imperial', async ({ page }) => {
   await answerAll(page, { ...averageMan, unit: 'metric', weight: '81.6466', cm: '177.8' })
-  await expect(calories(page)).toHaveText('2,263')
+  await expect(calories(page)).toHaveText('2,314')
 })
 
 test('pressing Continue on an empty step shows every message and focuses the first field', async ({ page }) => {
@@ -93,10 +93,13 @@ test('bad inches get a clear message', async ({ page }) => {
   await expect(page.getByLabel('Feet')).toBeFocused()
 })
 
-test('a small, older person on a cut gets the floor and a note, never negative macros', async ({ page }) => {
+// Found in the 2026-11-23 audit: the floor used to set 1,200 here, above this person's maintenance.
+test('a small, older person on a cut stays at maintenance, never above it or below zero', async ({ page }) => {
   await answerAll(page, { sex: 'Female', age: '80', weight: '100', feet: '4', inches: '0', activity: 'Mostly sitting', goal: 'Lose fat' })
-  await expect(calories(page)).toHaveText('1,200')
-  await expect(page.getByText(/Raised to 1,200 calories/)).toBeVisible()
+  // BMR 654.6 x 1.2 = 785.5
+  await expect(calories(page)).toHaveText('786')
+  await expect(page.getByText(/maintenance is below 1,200 calories/)).toBeVisible()
+  await expect(page.getByTestId('weekly-change')).toHaveCount(0)
   for (const macro of ['protein', 'carbs', 'fats']) {
     const grams = await page.getByTestId(`macro-${macro}`).locator('.macro-grams').textContent()
     expect(parseInt(grams ?? '0')).toBeGreaterThan(0)
@@ -127,10 +130,53 @@ test('fat loss is not offered under 18', async ({ page }) => {
   await expect(page.getByRole('radio', { name: 'Maintain' })).toBeChecked()
 })
 
+test('the floor applies when maintenance is above it', async ({ page }) => {
+  await answerAll(page, { sex: 'Female', age: '60', weight: '110', feet: '5', inches: '1', activity: 'Mostly sitting', goal: 'Lose fat' })
+  await pick(page, 'Fastest')
+  await expect(calories(page)).toHaveText('1,200')
+  await expect(page.getByText(/Raised to 1,200 calories/)).toBeVisible()
+})
+
+test('the pace changes the target and the expected weekly change', async ({ page }) => {
+  await answerAll(page, averageMan)
+  await expect(page.getByTestId('weekly-change')).toHaveText('Losing about 0.9 lb a week')
+  await expect(page.getByText('0.5% a week, the usual choice')).toBeVisible()
+
+  // 1% would be 898 a day; the deficit is capped at 25% of 2,763 = 691
+  await pick(page, 'Fastest')
+  await expect(calories(page)).toHaveText('2,072')
+  await expect(page.getByText(/capped there/)).toBeVisible()
+  await expect(page.getByTestId('weekly-change')).toHaveText('Losing about 1.4 lb a week')
+
+  await pick(page, 'Gentle')
+  // 81.65 x 0.25% x 1,100 = 224.5
+  await expect(calories(page)).toHaveText('2,539')
+
+  // A new goal starts from its own default pace, and the pace is kept after a reload.
+  await pick(page, 'Bulk')
+  await expect(page.getByRole('radio', { name: 'Lean' })).toBeChecked()
+  await pick(page, 'Faster')
+  await expect(calories(page)).toHaveText('3,212')
+  await page.reload()
+  await expect(calories(page)).toHaveText('3,212')
+  await expect(page.getByTestId('weekly-change')).toHaveText('Gaining about 0.9 lb a week')
+})
+
+test('the pace can be picked on the goal step', async ({ page }) => {
+  await answerAll(page, { ...averageMan, goal: 'Maintain' })
+  await page.getByRole('button', { name: 'Edit answers' }).click()
+  for (let step = 0; step < 3; step++) await continueButton(page).click()
+  await expect(page.getByRole('group', { name: 'How fast do you want to lose?' })).toHaveCount(0)
+  await pick(page, 'Lose fat')
+  await pick(page, 'Gentle')
+  await continueButton(page).click()
+  await expect(calories(page)).toHaveText('2,539')
+})
+
 test('switching goal on the results page updates the numbers', async ({ page }) => {
   await answerAll(page, averageMan)
   await pick(page, 'Bulk')
-  await expect(calories(page)).toHaveText('3,063')
+  await expect(calories(page)).toHaveText('2,988')
   await pick(page, 'Maintain')
   await expect(calories(page)).toHaveText('2,763')
 })
@@ -147,7 +193,7 @@ test('the per-meal table follows the number of meals', async ({ page }) => {
 test('a returning visitor lands on their results, and Start over clears them', async ({ page }) => {
   await answerAll(page, averageMan)
   await page.reload()
-  await expect(calories(page)).toHaveText('2,263')
+  await expect(calories(page)).toHaveText('2,314')
 
   await page.getByRole('button', { name: 'Start over' }).click()
   await expect(page.getByText('Step 1 of 4')).toBeVisible()
@@ -169,7 +215,7 @@ test('plans can be saved and deleted', async ({ page }) => {
   await expect(page.getByRole('status')).toHaveText('Plan saved on this device')
   const saved = page.locator('.saved-item')
   await expect(saved).toHaveCount(1)
-  await expect(saved).toContainText('2,263 cal')
+  await expect(saved).toContainText('2,314 cal')
 
   await page.reload()
   await expect(saved).toHaveCount(1)
@@ -185,7 +231,7 @@ test('broken saved data does not break the page', async ({ page }) => {
   await page.reload()
   await expect(page.getByText('Step 1 of 4')).toBeVisible()
   await answerAll(page, averageMan)
-  await expect(calories(page)).toHaveText('2,263')
+  await expect(calories(page)).toHaveText('2,314')
 })
 
 test('choices work with the keyboard', async ({ page }) => {
@@ -204,6 +250,24 @@ test('the page never scrolls sideways', async ({ page }) => {
   expect(await overflows()).toBe(false)
   await answerAll(page, averageMan)
   expect(await overflows()).toBe(false)
+})
+
+test('every row of pills fits on a 320 px wide phone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 })
+  // A row overflows when its content is wider than its box, even if the page itself does not scroll.
+  const overflowing = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('.choice-segmented .choice-options')]
+        .filter(row => row.scrollWidth > row.clientWidth + 1)
+        .map(row => row.textContent),
+    )
+  await answerAll(page, averageMan)
+  expect(await overflowing()).toEqual([])
+  await page.getByRole('link', { name: 'Log' }).click()
+  await page.getByLabel('Weight', { exact: true }).fill('180')
+  await page.getByRole('button', { name: 'Save day' }).click()
+  await expect(page.getByTestId('trend-weight')).toBeVisible()
+  expect(await overflowing()).toEqual([])
 })
 
 test('tapping the ring on a phone does not leave a macro highlighted', async ({ page, isMobile }) => {
