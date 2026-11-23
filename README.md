@@ -28,6 +28,8 @@ returning visitor lands straight on their results.
   that moves 10% toward each new weigh-in, from John Walker's *The Hacker's Diet*), the trend
   weight, and how much it moved over the last 7 days. The chart has a hover readout and can be
   read with the arrow keys; the history table below it lists every number.
+- A weekly check-in (the Check-in tab) that estimates what you really burn from your log and
+  suggests new targets. See below.
 - Export the log as a JSON backup and import it on another device. Days in the backup replace
   the same days on the device; anything unreadable is skipped and counted.
 - Light and dark themes in warm gym colours (cream walls, wood, black iron), following the
@@ -76,6 +78,40 @@ The math was checked against a separate version written from the papers on 3,375
 of sex, age, weight, height, activity and goal; the unit tests keep worked examples from that
 check and run 9,000 combinations (every pace included) on every push.
 
+## The weekly check-in
+
+The formula above is a starting guess, and for about one person in four it is off by more than
+10%. After about two weeks of logging, the check-in works out your real maintenance from the log:
+
+1. **Weight change:** a least-squares line through the weigh-ins of the last 28 days. Missed
+   weigh-ins need no filling in; the line spans them.
+2. **Calories eaten:** the average of the days with calories logged between the first and the
+   last weigh-in (food on the day of the last weigh-in shows up on the scale the next day, so it
+   is left out). Days with no calories are skipped, not counted as zero. It uses what you ate,
+   not the plan, so eating off plan does not throw it off. Someone who always forgets the
+   cooking oil gets an estimate in their own logged calories, which is what they compare
+   against anyway.
+3. **Energy in a kg of weight change:** not a fixed 7,700. A kg of fat holds about 9,440
+   calories and a kg of lean tissue about 1,820 ([Hall 2008](https://pmc.ncbi.nlm.nih.gov/articles/PMC2376744)).
+   The share of a change that is fat follows Forbes' curve, fat mass / (fat mass + 10.4 kg),
+   with body fat estimated from BMI, age and sex
+   ([Deurenberg 1991](https://pubmed.ncbi.nlm.nih.gov/2043597/)). For a 180 lb, 5 ft 10 in,
+   30 year old man that is about 6,620 calories per kg; leaner people get less, heavier people more.
+4. **Burn from the log** = average calories eaten − weight change per day × energy per kg.
+5. **Mixed with the formula** by how certain each one is (inverse-variance weighting): the
+   formula is taken as ±15%, the log's uncertainty comes from the scatter of the weigh-ins
+   around the line (at least 0.4 kg a day) and of the logged calories. A short or noisy log
+   leans on the formula; with four weeks of daily data the log does almost all of the work. The
+   page shows the split and a likely range.
+6. **Weekly limit:** between saved check-ins the estimate moves at most 200 calories a week, so
+   one odd week does not swing the targets.
+
+The suggested targets then use the same rules as the plan (pace, caps, the floor, the macro
+split), with the measured maintenance and the energy per kg above. The first estimate needs 5
+weigh-ins spread over at least 10 days and 7 days with calories. The page says when the log is
+far (35%) from the formula and suggests checking the logging. Check-ins are saved on the device
+with a history.
+
 ## Built with
 
 React 18 and TypeScript on Vite. No UI or chart library: the ring is a small SVG component and
@@ -90,21 +126,24 @@ src/
   form.ts       form state, unit switching, which step is complete
   storage.ts    local storage, guarded against blocked or broken data
   log/          the daily log: dates, entries, form checks, trend, backup files
-  components/   the steps, the results page, the ring, the log page and the weight chart
+  coach/        the weekly check-in: energy per kg, the expenditure estimate, saved check-ins
+  components/   the steps, the results page, the ring, the log and check-in pages and the weight chart
 e2e/            Playwright tests, including axe accessibility scans
 ```
 
 ## Tests
 
-- **89 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the log
-  (dates across month ends and daylight saving, the trend after gaps, backup files) and the chart. Every bug
+- **109 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the log
+  (dates across month ends and daylight saving, the trend after gaps, backup files), the chart, and the check-in (hand-worked
+  energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 28-day window, the weekly limit). Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
-- **37 end-to-end tests** (Playwright) on a desktop and a touch phone screen (72 runs; one
+- **44 end-to-end tests** (Playwright) on a desktop and a touch phone screen (86 runs; one
   test is mouse-only and one is touch-only), against the production build. They cover the full flow in both unit systems, every error message, unit
   switching, the goal pace, the calorie floor (and that it never goes above maintenance), the under-18 rule, pill rows on a 320 px phone, saved plans, returning visitors, broken saved
   data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, logging,
-  editing and deleting days, backup export and import, the chart with the keyboard, and an
+  editing and deleting days, backup export and import, the chart with the keyboard, the check-in (exact numbers checked
+  against a separate Python version, saving, the weekly limit, three tabs on a 320 px phone), and an
   [axe](https://github.com/dequelabs/axe-core) scan for WCAG 2.1 A and AA rules on every step,
   with and without errors showing, in light and dark mode.
 
@@ -131,8 +170,10 @@ npm run dev            # http://localhost:5173/macro-calculator/
 
 ## Known limits
 
-- The targets come from a formula only. The log shows your trend but does not adjust the
-  targets from it yet.
+- The Plan tab shows the formula; the measured targets are on the Check-in tab. The plan turns
+  the pace into calories with the simple 7,700 per kg rule, the check-in with the energy per kg
+  for your body, so the two can differ by a few dozen calories at the same maintenance.
+- How accurate the check-in is has not been measured yet; a simulation study is next.
 - The log is kept in this browser's local storage (a few hundred bytes a day, so years fit
   well under the browser's limit). Clearing site data deletes it, which is why there is an
   export button. There is no account or sync.
@@ -141,8 +182,8 @@ npm run dev            # http://localhost:5173/macro-calculator/
 
 ## Planned
 
-An estimate of your real energy use from your weight trend and logged calories, so the targets
-adjust each week.
+A simulation study of the check-in (how far off it is after 1, 2 and 4 weeks compared with the
+formula), importing daily totals from Cronometer and MyFitnessPal, and an installable offline app.
 
 ## License
 
