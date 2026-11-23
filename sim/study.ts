@@ -41,6 +41,8 @@ export interface PopulationOptions {
   expenditureChange?: { day: number; factor: number }
   /** Most food a person leaves out of the log (0.3 normally, 0 for perfect loggers). */
   underLoggingMax?: number
+  /** Holidays, stretches with no log, and forgotten meals (see `addMessyHabits`). */
+  messy?: boolean
 }
 
 export function randomPerson(random: Random, options: PopulationOptions = {}): SimPerson {
@@ -83,7 +85,24 @@ export function randomPerson(random: Random, options: PopulationOptions = {}): S
     waterKgPer500: options.waterKgPer500 ?? WATER_KG_PER_500,
     expenditureChange: options.expenditureChange,
   }
+  if (options.messy) addMessyHabits(random, habits)
   return { person, body, habits, target }
+}
+
+/**
+ * The real-life breaks in a log, all assumptions sized to be common but not extreme: half the
+ * people take a 3 to 7 day holiday eating 20 to 50% more, most have one or two 3 to 7 day
+ * stretches with no log while eating up to 20% more, and up to 15% of normal days leave a meal out.
+ */
+function addMessyHabits(random: Random, habits: Habits) {
+  const stretch = (extraMin: number, extraMax: number) => ({
+    startDay: Math.floor(random.uniform(7, 36)),
+    days: Math.floor(random.uniform(3, 8)),
+    extraShare: random.uniform(extraMin, extraMax),
+  })
+  if (random.chance(0.5)) habits.holiday = stretch(0.2, 0.5)
+  habits.lapses = Array.from({ length: random.pick([0, 1, 1, 2]) }, () => stretch(0, 0.2))
+  habits.partialDayChance = random.uniform(0, 0.15)
 }
 
 function pickActivity(random: Random): number {
@@ -113,6 +132,15 @@ export const METHODS: Method[] = [
   { name: 'Check-in, no weekly limit', settings: { ...DEFAULT_SETTINGS, maxChangePerWeek: Infinity } },
   { name: 'Check-in with 7,700 cal/kg', fixedCaloriesPerKg: 7700 },
   { name: 'Log only (no formula, no limit)', settings: { ...DEFAULT_SETTINGS, formulaShareSd: 100, maxChangePerWeek: Infinity } },
+]
+
+/** The weekly limit at other sizes, for the messy-log scenario. */
+export const LIMIT_METHODS: Method[] = [
+  METHODS[0],
+  { name: 'Check-in, limit 100 a week', settings: { ...DEFAULT_SETTINGS, maxChangePerWeek: 100 } },
+  { name: 'Check-in (the app)' },
+  { name: 'Check-in, limit 300 a week', settings: { ...DEFAULT_SETTINGS, maxChangePerWeek: 300 } },
+  METHODS[3],
 ]
 
 export interface Estimate {
@@ -172,7 +200,15 @@ export interface Summary {
   within10: number
   /** Share whose estimate used the log (the rest fell back to the formula). */
   usedLog: number
+  /**
+   * Share of check-ins that moved more than 200 calories further than the truth did since the
+   * last check-in (a jump the person would feel in their targets for no real reason). Counted
+   * from week 3, when both check-ins used the log; 0 before that.
+   */
+  wrongMoves: number
 }
+
+export const WRONG_MOVE_CALORIES = 200
 
 const percentile = (sorted: number[], p: number) => sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))]
 
@@ -187,17 +223,26 @@ export interface StudyOptions extends PopulationOptions {
 export function runStudy(options: StudyOptions): Summary[] {
   const random = makeRandom(options.seed)
   const methods = options.methods ?? METHODS
-  const errors = methods.map(() => CHECK_IN_DAYS.map(() => [] as { error: number; share: number; fromLog: boolean }[]))
+  const errors = methods.map(() => CHECK_IN_DAYS.map(() => [] as { error: number; share: number; fromLog: boolean; wrongMove?: boolean }[]))
   const lastDay = CHECK_IN_DAYS[CHECK_IN_DAYS.length - 1]
 
   for (let i = 0; i < options.people; i++) {
     const sim = randomPerson(random, options)
     const days = simulate(sim.body, sim.habits, lastDay + 1, START_DATE, random)
+    const targets = CHECK_IN_DAYS.map(day => {
+      const truth = truthAt(sim, days, day)
+      return options.realCalories ? truth.real : truth.logged
+    })
     methods.forEach((method, m) => {
-      runMethod(sim, days, method).forEach((estimate, d) => {
-        const truth = truthAt(sim, days, CHECK_IN_DAYS[d])
-        const target = options.realCalories ? truth.real : truth.logged
-        errors[m][d].push({ error: estimate.value - target, share: Math.abs(estimate.value - target) / target, fromLog: estimate.fromLog })
+      const estimates = runMethod(sim, days, method)
+      estimates.forEach((estimate, d) => {
+        const target = targets[d]
+        const before = estimates[d - 1]
+        const wrongMove =
+          before && before.fromLog && estimate.fromLog
+            ? Math.abs(estimate.value - before.value - (target - targets[d - 1])) > WRONG_MOVE_CALORIES
+            : undefined
+        errors[m][d].push({ error: estimate.value - target, share: Math.abs(estimate.value - target) / target, fromLog: estimate.fromLog, wrongMove })
       })
     })
   }
@@ -215,6 +260,7 @@ export function runStudy(options: StudyOptions): Summary[] {
         bias: rows.reduce((sum, row) => sum + row.error, 0) / rows.length,
         within10: rows.filter(row => row.share <= 0.1).length / rows.length,
         usedLog: rows.filter(row => row.fromLog).length / rows.length,
+        wrongMoves: rows.filter(row => row.wrongMove).length / rows.length,
       })
     })
   })

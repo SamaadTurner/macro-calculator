@@ -4,7 +4,7 @@ import { estimateExpenditure } from '../src/coach/expenditure'
 import { simulate, toLog } from './body'
 import type { Body, Habits } from './body'
 import { makeRandom } from './random'
-import { randomPerson, runMethod, runStudy, START_DATE, truthAt, METHODS } from './study'
+import { LIMIT_METHODS, randomPerson, runMethod, runStudy, START_DATE, truthAt, METHODS } from './study'
 
 const body: Body = { fatKg: 20, leanKg: 60, heightCm: 178, age: 30, sexOffset: 5, baselineExpenditure: 2600 }
 
@@ -76,6 +76,37 @@ describe('body model', () => {
     expect(days.every(day => day.loggedCalories === 2080)).toBe(true)
   })
 
+  it('on a holiday eats more, weighs in less, logs little, and puts water on', () => {
+    const holiday = { startDay: 20, days: 7, extraShare: 0.5 }
+    const plain = simulate(body, quiet(2600), 40, START_DATE, makeRandom(4))
+    const away = simulate(body, { ...quiet(2600), waterKgPer500: 1, holiday }, 40, START_DATE, makeRandom(4))
+    const holidayDays = away.slice(20, 27)
+    expect(away[27].tissueKg).toBeGreaterThan(plain[27].tissueKg + 0.3)
+    expect(holidayDays.filter(day => day.scaleKg !== undefined).length).toBeLessThan(5)
+    // Logged holiday days hold only part of the 3,900 calories eaten.
+    holidayDays.filter(day => day.loggedCalories !== undefined).forEach(day => expect(day.loggedCalories).toBe(2340))
+    // Day 27 is the first morning home (a Sunday, so no weekend bump): about 0.9 kg of water on top of tissue.
+    expect(away[27].scaleKg! - away[27].tissueKg).toBeGreaterThan(0.8)
+    // The rest of the log is untouched.
+    expect(away.slice(0, 20).every(day => day.loggedCalories === 2600 && day.scaleKg !== undefined)).toBe(true)
+  })
+
+  it('logs nothing during a gap but keeps eating', () => {
+    const lapses = [{ startDay: 10, days: 5, extraShare: 0.2 }]
+    const days = simulate(body, { ...quiet(2600), lapses }, 20, START_DATE, makeRandom(5))
+    expect(toLog(days).map(entry => entry.date)).not.toContain(days[12].date)
+    expect(toLog(days)).toHaveLength(15)
+    expect(days[15].tissueKg).toBeGreaterThan(80.1)
+  })
+
+  it('leaves part of a meal out on some days', () => {
+    const days = simulate(body, { ...quiet(2600), partialDayChance: 0.5 }, 200, START_DATE, makeRandom(6))
+    const short = days.filter(day => day.loggedCalories! < 2600)
+    expect(short.length).toBeGreaterThan(70)
+    expect(short.length).toBeLessThan(130)
+    expect(short.every(day => day.loggedCalories! >= 1040 && day.loggedCalories! <= 1820)).toBe(true)
+  })
+
   it('turns days into log entries, skipping missed ones', () => {
     const days = simulate(body, { ...quiet(2600), missWeighIn: 0.5, missCalories: 0.5 }, 100, START_DATE, makeRandom(3))
     const log = toLog(days)
@@ -119,6 +150,22 @@ describe('study', () => {
     expect(app[0].fromLog).toBe(false) // week 1: 7 days, not enough
     expect(app[1].fromLog).toBe(true) // week 2
     expect(truthAt(sim, days, 14).logged).toBeCloseTo(truthAt(sim, days, 14).real * (1 - sim.habits.underLogging), 6)
+  })
+
+  it('keeps the people the same when the messy habits are added', () => {
+    const clean = randomPerson(makeRandom(12))
+    const messy = randomPerson(makeRandom(12), { messy: true })
+    expect(messy.body).toEqual(clean.body)
+    expect(messy.habits.plannedIntake).toBe(clean.habits.plannedIntake)
+    expect(messy.habits.partialDayChance).toBeGreaterThanOrEqual(0)
+  })
+
+  it('counts check-ins that jump without a real change', () => {
+    const summaries = runStudy({ people: 200, seed: 11, messy: true, methods: LIMIT_METHODS })
+    const at = (method: string, day: number) => summaries.find(s => s.method === method && s.day === day)!
+    expect(at('Check-in (the app)', 14).wrongMoves).toBe(0) // the first estimate has nothing to move from
+    // A limit of 100 a week can hardly move further than the truth by over 200.
+    expect(at('Check-in, limit 100 a week', 28).wrongMoves).toBeLessThan(at('Check-in, no weekly limit', 28).wrongMoves)
   })
 
   it('beats the formula by week 4 across a small population', () => {

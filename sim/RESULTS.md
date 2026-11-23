@@ -20,6 +20,8 @@ Share of people whose check-in used their log: week 1 0%, week 2 98%, week 3 100
 
 Average error at week 4 (positive = too high): Formula only +327; Check-in (the app) +20; Check-in, first version (28 days, no carry-over fix) −17; Check-in, no weekly limit +13; Check-in with 7,700 cal/kg +17; Log only (no formula, no limit) −68.
 
+Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): Check-in (the app) 8%; Check-in, first version (28 days, no carry-over fix) 13%; Check-in, no weekly limit 12%; Check-in with 7,700 cal/kg 10%; Log only (no formula, no limit) 24%.
+
 ### Against real calories
 
 Truth in real calories. Under-logging (0 to 30%) now counts as error for the check-in.
@@ -36,6 +38,8 @@ Truth in real calories. Under-logging (0 to 30%) now counts as error for the che
 Share of people whose check-in used their log: week 1 0%, week 2 98%, week 3 100%, week 4 100%, week 5 100%, week 6 100%.
 
 Average error at week 4 (positive = too high): Formula only −30; Check-in (the app) −338; Check-in, first version (28 days, no carry-over fix) −374; Check-in, no weekly limit −345; Check-in with 7,700 cal/kg −341; Log only (no formula, no limit) −426.
+
+Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): Check-in (the app) 9%; Check-in, first version (28 days, no carry-over fix) 14%; Check-in, no weekly limit 12%; Check-in with 7,700 cal/kg 10%; Log only (no formula, no limit) 24%.
 
 ### Everyone logs everything
 
@@ -54,6 +58,8 @@ Share of people whose check-in used their log: week 1 0%, week 2 98%, week 3 100
 
 Average error at week 4 (positive = too high): Formula only +51; Check-in (the app) +60; Check-in, first version (28 days, no carry-over fix) +56; Check-in, no weekly limit +58; Check-in with 7,700 cal/kg +75; Log only (no formula, no limit) +64.
 
+Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): Check-in (the app) 5%; Check-in, first version (28 days, no carry-over fix) 11%; Check-in, no weekly limit 8%; Check-in with 7,700 cal/kg 6%; Log only (no formula, no limit) 23%.
+
 ### No water shift at the start
 
 Same people without the early glycogen and water drop.
@@ -70,6 +76,8 @@ Same people without the early glycogen and water drop.
 Share of people whose check-in used their log: week 1 0%, week 2 98%, week 3 100%, week 4 100%, week 5 100%, week 6 100%.
 
 Average error at week 4 (positive = too high): Formula only +324; Check-in (the app) +41; Check-in, first version (28 days, no carry-over fix) +4; Check-in, no weekly limit +33; Check-in with 7,700 cal/kg +38; Log only (no formula, no limit) −40.
+
+Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): Check-in (the app) 9%; Check-in, first version (28 days, no carry-over fix) 14%; Check-in, no weekly limit 12%; Check-in with 7,700 cal/kg 11%; Log only (no formula, no limit) 20%.
 
 ### Formula twice as far off
 
@@ -88,6 +96,8 @@ Share of people whose check-in used their log: week 1 0%, week 2 98%, week 3 100
 
 Average error at week 4 (positive = too high): Formula only +334; Check-in (the app) +27; Check-in, first version (28 days, no carry-over fix) −13; Check-in, no weekly limit +16; Check-in with 7,700 cal/kg +27; Log only (no formula, no limit) −64.
 
+Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): Check-in (the app) 11%; Check-in, first version (28 days, no carry-over fix) 14%; Check-in, no weekly limit 14%; Check-in with 7,700 cal/kg 13%; Log only (no formula, no limit) 24%.
+
 ### Burn rises 12% from day 21
 
 Everyone starts moving more on day 21 (a new job or more training), so the truth jumps and the estimate has to follow.
@@ -104,3 +114,59 @@ Everyone starts moving more on day 21 (a new job or more training), so the truth
 Share of people whose check-in used their log: week 1 0%, week 2 98%, week 3 100%, week 4 100%, week 5 100%, week 6 100%.
 
 Average error at week 4 (positive = too high): Formula only +95; Check-in (the app) −178; Check-in, first version (28 days, no carry-over fix) −216; Check-in, no weekly limit −181; Check-in with 7,700 cal/kg −179; Log only (no formula, no limit) −253.
+
+Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): Check-in (the app) 23%; Check-in, first version (28 days, no carry-over fix) 25%; Check-in, no weekly limit 26%; Check-in with 7,700 cal/kg 24%; Log only (no formula, no limit) 32%.
+
+### Holidays, gaps and forgotten meals
+
+Half the people take a 3 to 7 day holiday eating 20 to 50% more, with few weigh-ins and little logged; most have one or two 3 to 7 day gaps with no log while eating up to 20% more; up to 15% of normal days leave out part of a meal. The weekly limit at other sizes (the app uses 200).
+
+| Method | Week 1 | Week 2 | Week 3 | Week 4 | Week 6 |
+|---|---|---|---|---|---|
+| Formula only | 335 / 711 (30%) | 321 / 689 (31%) | 314 / 683 (31%) | 309 / 669 (33%) | 306 / 666 (33%) |
+| Check-in, limit 100 a week | 335 / 711 (30%) | 179 / 464 (53%) | 150 / 387 (62%) | 137 / 359 (65%) | 122 / 330 (69%) |
+| Check-in (the app) | 335 / 711 (30%) | 179 / 464 (53%) | 143 / 376 (63%) | 142 / 374 (63%) | 132 / 352 (66%) |
+| Check-in, limit 300 a week | 335 / 711 (30%) | 179 / 464 (53%) | 145 / 378 (62%) | 148 / 394 (61%) | 134 / 362 (65%) |
+| Check-in, no weekly limit | 335 / 711 (30%) | 179 / 464 (53%) | 147 / 387 (61%) | 150 / 403 (60%) | 135 / 368 (64%) |
+
+Share of people whose check-in used their log: week 1 0%, week 2 86%, week 3 99%, week 4 100%, week 5 100%, week 6 100%.
+
+Average error at week 4 (positive = too high): Formula only +292; Check-in, limit 100 a week −43; Check-in (the app) −92; Check-in, limit 300 a week −108; Check-in, no weekly limit −114.
+
+Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): Check-in, limit 100 a week 1%; Check-in (the app) 15%; Check-in, limit 300 a week 20%; Check-in, no weekly limit 19%.
+
+### Holidays and gaps, and the burn rises 12% from day 21
+
+Both at once: the limit has to hold back the false drops without holding back a real rise.
+
+| Method | Week 1 | Week 2 | Week 3 | Week 4 | Week 6 |
+|---|---|---|---|---|---|
+| Formula only | 335 / 711 (30%) | 321 / 689 (31%) | 314 / 683 (31%) | 214 / 548 (50%) | 217 / 531 (51%) |
+| Check-in, limit 100 a week | 335 / 711 (30%) | 179 / 464 (53%) | 150 / 387 (62%) | 247 / 545 (43%) | 215 / 471 (49%) |
+| Check-in (the app) | 335 / 711 (30%) | 179 / 464 (53%) | 143 / 376 (63%) | 282 / 586 (35%) | 202 / 453 (53%) |
+| Check-in, limit 300 a week | 335 / 711 (30%) | 179 / 464 (53%) | 145 / 378 (62%) | 290 / 599 (34%) | 194 / 446 (55%) |
+| Check-in, no weekly limit | 335 / 711 (30%) | 179 / 464 (53%) | 147 / 387 (61%) | 292 / 609 (33%) | 192 / 442 (55%) |
+
+Share of people whose check-in used their log: week 1 0%, week 2 86%, week 3 99%, week 4 100%, week 5 100%, week 6 100%.
+
+Average error at week 4 (positive = too high): Formula only +62; Check-in, limit 100 a week −259; Check-in (the app) −297; Check-in, limit 300 a week −308; Check-in, no weekly limit −312.
+
+Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): Check-in, limit 100 a week 21%; Check-in (the app) 30%; Check-in, limit 300 a week 34%; Check-in, no weekly limit 33%.
+
+### Limit sizes on clean logs
+
+The main population again, for comparison.
+
+| Method | Week 1 | Week 2 | Week 3 | Week 4 | Week 6 |
+|---|---|---|---|---|---|
+| Formula only | 341 / 727 (28%) | 333 / 703 (29%) | 334 / 687 (29%) | 334 / 688 (29%) | 326 / 683 (29%) |
+| Check-in, limit 100 a week | 341 / 727 (28%) | 182 / 430 (52%) | 153 / 382 (60%) | 128 / 328 (70%) | 80 / 213 (86%) |
+| Check-in (the app) | 341 / 727 (28%) | 182 / 430 (52%) | 143 / 361 (62%) | 119 / 299 (73%) | 74 / 191 (89%) |
+| Check-in, limit 300 a week | 341 / 727 (28%) | 182 / 430 (52%) | 140 / 356 (62%) | 117 / 294 (74%) | 74 / 191 (89%) |
+| Check-in, no weekly limit | 341 / 727 (28%) | 182 / 430 (52%) | 140 / 361 (63%) | 117 / 294 (74%) | 74 / 191 (89%) |
+
+Share of people whose check-in used their log: week 1 0%, week 2 98%, week 3 100%, week 4 100%, week 5 100%, week 6 100%.
+
+Average error at week 4 (positive = too high): Formula only +327; Check-in, limit 100 a week +49; Check-in (the app) +20; Check-in, limit 300 a week +14; Check-in, no weekly limit +13.
+
+Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): Check-in, limit 100 a week 0%; Check-in (the app) 8%; Check-in, limit 300 a week 12%; Check-in, no weekly limit 12%.

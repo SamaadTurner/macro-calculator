@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs'
-import { runStudy } from './study'
+import { LIMIT_METHODS, runStudy } from './study'
 import type { StudyOptions, Summary } from './study'
 
 // Runs the simulation study and writes sim/RESULTS.md. Usage: npm run simulate
@@ -33,6 +33,17 @@ function biasLine(summaries: Summary[], day: number): string {
     .join('; ')
 }
 
+/** Average share of wrong moves over weeks 3 to 6, per method. */
+function wrongMovesLine(summaries: Summary[]): string {
+  const methods = [...new Set(summaries.map(s => s.method))].filter(method => method !== 'Formula only')
+  return methods
+    .map(method => {
+      const rows = summaries.filter(s => s.method === method && s.day >= 21)
+      return `${method} ${pct(rows.reduce((sum, s) => sum + s.wrongMoves, 0) / rows.length)}`
+    })
+    .join('; ')
+}
+
 function section(title: string, options: StudyOptions, note: string): string {
   const started = Date.now()
   const summaries = runStudy(options)
@@ -48,6 +59,8 @@ function section(title: string, options: StudyOptions, note: string): string {
     `Share of people whose check-in used their log: ${app.map(s => `week ${s.day / 7} ${pct(s.usedLog)}`).join(', ')}.`,
     '',
     `Average error at week 4 (positive = too high): ${biasLine(summaries, 28)}.`,
+    '',
+    `Check-ins that moved over 200 calories more than the truth did since the last one (average of weeks 3 to 6): ${wrongMovesLine(summaries)}.`,
     '',
   ].join('\n')
 }
@@ -73,6 +86,17 @@ const parts = [
     { ...base, expenditureChange: { day: 21, factor: 1.12 } },
     'Everyone starts moving more on day 21 (a new job or more training), so the truth jumps and the estimate has to follow.',
   ),
+  section(
+    'Holidays, gaps and forgotten meals',
+    { ...base, messy: true, methods: LIMIT_METHODS },
+    'Half the people take a 3 to 7 day holiday eating 20 to 50% more, with few weigh-ins and little logged; most have one or two 3 to 7 day gaps with no log while eating up to 20% more; up to 15% of normal days leave out part of a meal. The weekly limit at other sizes (the app uses 200).',
+  ),
+  section(
+    'Holidays and gaps, and the burn rises 12% from day 21',
+    { ...base, messy: true, methods: LIMIT_METHODS, expenditureChange: { day: 21, factor: 1.12 } },
+    'Both at once: the limit has to hold back the false drops without holding back a real rise.',
+  ),
+  section('Limit sizes on clean logs', { ...base, methods: LIMIT_METHODS }, 'The main population again, for comparison.'),
 ]
 
 writeFileSync(new URL('./RESULTS.md', import.meta.url), parts.join('\n'))
