@@ -142,6 +142,8 @@ export type ExpenditureResult =
       gaps: [string, string][]
       /** Logged days that looked part-logged and were left out of the average. */
       partDays: string[]
+      /** Days the user marked as not complete, left out of the average. */
+      markedDays: string[]
       /** Share of the days between the first and last weigh-in that have calories logged. */
       loggedShare: number
     }
@@ -231,11 +233,14 @@ export function estimateExpenditure(input: ExpenditureInput): ExpenditureResult 
   )
 
   // Forgotten meals: a day far under the usual is left out, unless low days are a regular pattern.
+  // Days the user marked as not complete are left out first; the check below looks at the rest.
+  const markedDays = loggedDays.filter(entry => entry.incomplete).map(entry => entry.date)
+  const unmarked = loggedDays.filter(entry => !entry.incomplete)
   let partDays: string[] = []
-  if (settings.partDayShare > 0) {
-    const usual = median(loggedDays.map(entry => entry.calories))
-    const low = loggedDays.filter(entry => entry.calories < settings.partDayShare * usual)
-    if (low.length <= PART_DAY_PATTERN_SHARE * loggedDays.length) partDays = low.map(entry => entry.date)
+  if (settings.partDayShare > 0 && unmarked.length > 0) {
+    const usual = median(unmarked.map(entry => entry.calories))
+    const low = unmarked.filter(entry => entry.calories < settings.partDayShare * usual)
+    if (low.length <= PART_DAY_PATTERN_SHARE * unmarked.length) partDays = low.map(entry => entry.date)
   }
 
   // Gaps split the log into stretches. A weigh-in on a gap's first morning still shows the food
@@ -249,7 +254,7 @@ export function estimateExpenditure(input: ExpenditureInput): ExpenditureResult 
     groups[stretch].push(entry)
   }
   const stretches = groups.filter(group => group.length >= 2)
-  const leftOut = new Set(partDays)
+  const leftOut = new Set([...partDays, ...markedDays])
   const usedIntake = loggedDays
     .filter(entry => !leftOut.has(entry.date) && stretches.some(group => entry.date >= group[0].date && entry.date < group[group.length - 1].date))
     .map(entry => entry.calories)
@@ -309,6 +314,7 @@ export function estimateExpenditure(input: ExpenditureInput): ExpenditureResult 
     unusual: Math.abs(fromData - formulaMaintenance) > UNUSUAL_SHARE * formulaMaintenance,
     gaps,
     partDays,
+    markedDays,
     loggedShare: loggedDays.length / have.spanDays,
   }
 }

@@ -9,6 +9,8 @@ export interface LogEntry {
   protein?: number
   carbs?: number
   fats?: number
+  /** The user said not all of the day's food is in `calories`. The check-in leaves such days out. */
+  incomplete?: true
 }
 
 export const LOG_LIMITS = {
@@ -40,6 +42,7 @@ export function cleanEntry(item: unknown): LogEntry | null {
     if (isFiniteNumber(grams) && inRange(grams, LOG_LIMITS.grams)) entry[macro] = Math.round(grams)
   }
   if (entry.weightKg === undefined && entry.calories === undefined) return null
+  if (raw.incomplete === true && entry.calories !== undefined) entry.incomplete = true
   return entry
 }
 

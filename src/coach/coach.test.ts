@@ -175,6 +175,19 @@ describe('expenditure estimate', () => {
     expect(result.averageIntake).toBeCloseTo((24 * 2400 + 1300) / 25, 6)
   })
 
+  it('leaves out days the user marked as not complete, however close to usual they are', () => {
+    // Days 3 and 9 logged 2,100 of a usual 2,400 (too close to be spotted) but were ticked.
+    const entries = makeLog(28, () => 80, day => (day === 3 || day === 9 ? 2100 : 2400)).map((entry, i) =>
+      i === 3 || i === 9 ? { ...entry, incomplete: true as const } : entry,
+    )
+    const result = estimateExpenditure(input(entries))
+    if (result.status !== 'ready') throw new Error('expected an estimate')
+    expect(result.markedDays).toEqual([addDays(TODAY, -24), addDays(TODAY, -18)])
+    expect(result.partDays).toEqual([])
+    expect(result.intakeDays).toBe(25)
+    expect(result.averageIntake).toBe(2400)
+  })
+
   it('keeps low days that are a regular pattern, like two fasting days a week', () => {
     const calories = (day: number) => (day % 7 === 2 || day % 7 === 5 ? 600 : 2500)
     const result = estimateExpenditure(input(makeLog(28, () => 80, calories)))

@@ -112,14 +112,28 @@ describe('log form', () => {
   })
 
   it('stores pounds as kilograms and rounds calories and grams', () => {
-    const entry = draftToEntry({ date: today, weight: '180', calories: '2100.6', protein: '150', carbs: '', fats: '70.2' }, 'imperial')
+    const entry = draftToEntry({ date: today, weight: '180', calories: '2100.6', protein: '150', carbs: '', fats: '70.2', incomplete: false }, 'imperial')
     expect(entry).toEqual({ date: today, weightKg: lbToKg(180), calories: 2101, protein: 150, fats: 70 })
   })
 
   it('fills the form back in the current unit', () => {
     const draft = entryToDraft({ date: today, weightKg: lbToKg(180), calories: 2100 }, 'imperial')
-    expect(draft).toEqual({ date: today, weight: '180', calories: '2100', protein: '', carbs: '', fats: '' })
+    expect(draft).toEqual({ date: today, weight: '180', calories: '2100', protein: '', carbs: '', fats: '', incomplete: false })
     expect(entryToDraft({ date: today, weightKg: lbToKg(180) }, 'metric').weight).toBe('81.6')
+  })
+
+  it('keeps the not-complete tick only next to calories', () => {
+    const ticked = { ...emptyDraft(today), calories: '1400', incomplete: true }
+    expect(draftToEntry(ticked, 'metric')).toEqual({ date: today, calories: 1400, incomplete: true })
+    expect(entryToDraft({ date: today, calories: 1400, incomplete: true }, 'metric').incomplete).toBe(true)
+    // A weight with no calories cannot be "not complete".
+    expect(draftToEntry({ ...emptyDraft(today), weight: '80', incomplete: true }, 'metric')).toEqual({ date: today, weightKg: 80 })
+  })
+
+  it('reads the not-complete tick back from storage and backups, and nothing else as true', () => {
+    expect(cleanEntry({ date: today, calories: 1400, incomplete: true })).toEqual({ date: today, calories: 1400, incomplete: true })
+    expect(cleanEntry({ date: today, calories: 1400, incomplete: 'yes' })).toEqual({ date: today, calories: 1400 })
+    expect(cleanEntry({ date: today, weightKg: 80, incomplete: true })).toEqual({ date: today, weightKg: 80 })
   })
 })
 

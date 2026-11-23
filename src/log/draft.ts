@@ -13,11 +13,13 @@ export interface LogDraft {
   protein: string
   carbs: string
   fats: string
+  /** "Not all of this day's food is logged". */
+  incomplete: boolean
 }
 
 export type DraftErrors = Partial<Record<keyof LogDraft | 'form', string>>
 
-export const emptyDraft = (date = todayIso()): LogDraft => ({ date, weight: '', calories: '', protein: '', carbs: '', fats: '' })
+export const emptyDraft = (date = todayIso()): LogDraft => ({ date, weight: '', calories: '', protein: '', carbs: '', fats: '', incomplete: false })
 
 const MACRO_NAMES = { protein: 'Protein', carbs: 'Carbs', fats: 'Fats' } as const
 
@@ -59,6 +61,8 @@ export function draftToEntry(draft: LogDraft, unit: UnitSystem): LogEntry {
   if (weight !== null) entry.weightKg = unit === 'imperial' ? lbToKg(weight) : weight
   const calories = parseNumber(draft.calories)
   if (calories !== null) entry.calories = Math.round(calories)
+  // The tick only means something next to a calorie number.
+  if (calories !== null && draft.incomplete) entry.incomplete = true
   for (const macro of ['protein', 'carbs', 'fats'] as const) {
     const grams = parseNumber(draft[macro])
     if (grams !== null) entry[macro] = Math.round(grams)
@@ -80,5 +84,6 @@ export function entryToDraft(entry: LogEntry, unit: UnitSystem): LogDraft {
     protein: text(entry.protein),
     carbs: text(entry.carbs),
     fats: text(entry.fats),
+    incomplete: entry.incomplete === true,
   }
 }
