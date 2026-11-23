@@ -393,6 +393,36 @@ a {
   font-size: 0.8125rem;
 }
 
+/* A single tick box with its label beside it and a hint underneath. */
+.check-field {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  align-items: center;
+}
+
+.check-field input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.check-field label {
+  padding: 8px 0;
+  font-weight: 500;
+}
+
+.check-field input:disabled,
+.check-field input:disabled + label {
+  opacity: 0.55;
+}
+
+.check-field .field-hint {
+  grid-column: 2;
+  margin-top: 0;
+}
+
 .choice-hint {
   margin: -2px 0 10px;
 }

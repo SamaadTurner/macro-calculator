@@ -235,8 +235,17 @@ function Ready({ result, current, planCalories, comparedWith, unit, savedToday, 
         <div className="share-bar" aria-hidden="true">
           <span className="share-data" style={{ width: `${dataPct}%` }} />
         </div>
-        {result.limited || result.unusual || result.partDays.length > 0 || patchy ? (
+        {result.limited || result.unusual || result.partDays.length > 0 || result.markedDays.length > 0 || patchy ? (
           <ul className="notices" data-testid="checkin-notices">
+            {result.markedDays.length > 0 ? (
+              <li className="notice">
+                <AlertIcon />{' '}
+                <span>
+                  Left out {result.markedDays.length === 1 ? 'the day' : `${result.markedDays.length} days`} you marked as not complete (
+                  {result.markedDays.map(day => formatDay(day)).join(', ')}).
+                </span>
+              </li>
+            ) : null}
             {result.partDays.length > 0 ? (
               <li className="notice">
                 <AlertIcon />{' '}
@@ -320,7 +329,7 @@ function Ready({ result, current, planCalories, comparedWith, unit, savedToday, 
           <div>
             <dt>
               Average calories logged ({result.intakeDays} days, {formatDay(result.start)} to {formatDay(addDays(result.end, -1))}
-              {result.partDays.length > 0 ? `; ${result.partDays.length} part-logged left out` : ''})
+              {result.partDays.length + result.markedDays.length > 0 ? `; ${result.partDays.length + result.markedDays.length} part-logged left out` : ''})
             </dt>
             <dd>{cal(Math.round(result.averageIntake))} cal</dd>
           </div>

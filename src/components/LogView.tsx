@@ -214,6 +214,20 @@ export function LogView({ unit, onUnitChange, showToast }: LogViewProps) {
           decimals
         />
         <NumberField id="log-calories" label="Calories eaten" suffix="cal" value={draft.calories} onChange={update('calories')} error={errors.calories} placeholder="2200" />
+        <div className="check-field">
+          <input
+            id="log-incomplete"
+            type="checkbox"
+            checked={draft.incomplete && draft.calories.trim() !== ''}
+            disabled={draft.calories.trim() === ''}
+            aria-describedby="log-incomplete-hint"
+            onChange={event => setDraft(current => ({ ...current, incomplete: event.target.checked }))}
+          />
+          <label htmlFor="log-incomplete">Not all of this day&apos;s food is logged</label>
+          <p id="log-incomplete-hint" className="field-hint">
+            The weekly check-in leaves this day out, so a missed meal does not make your burn look lower.
+          </p>
+        </div>
         <details className="details log-macros" open={Boolean(draft.protein || draft.carbs || draft.fats || errors.protein || errors.carbs || errors.fats)}>
           <summary>Add macros (optional)</summary>
           <div className="macro-fields">
@@ -282,6 +296,7 @@ export function LogView({ unit, onUnitChange, showToast }: LogViewProps) {
                     <td>{entry.weightKg === undefined ? '–' : `${weightForDisplay(entry.weightKg, unit)} ${label}`}</td>
                     <td className="food">
                       {entry.calories === undefined ? '–' : `${entry.calories.toLocaleString('en-US')} cal`}
+                      {entry.incomplete ? <small>Not complete</small> : null}
                       {macroSummary(entry) ? <small>{macroSummary(entry)}</small> : null}
                     </td>
                     <td className="row-actions">

@@ -82,6 +82,24 @@ test('asks for a weight or calories and checks the numbers', async ({ page }) =>
   await expect(page.getByRole('row', { name: /Nov 23/ })).toHaveCount(0)
 })
 
+test('marks a day as not complete', async ({ page }) => {
+  await openLog(page)
+  const tick = page.getByLabel("Not all of this day's food is logged")
+  // Only makes sense next to a calorie number.
+  await expect(tick).toBeDisabled()
+  await page.getByLabel('Calories eaten').fill('1400')
+  await tick.check()
+  await page.getByRole('button', { name: 'Save day' }).click()
+  await expect(page.getByRole('row', { name: /Nov 23/ })).toContainText('1,400 calNot complete')
+
+  await page.reload()
+  await page.getByRole('button', { name: 'Edit Nov 23' }).click()
+  await expect(tick).toBeChecked()
+  await tick.uncheck()
+  await page.getByRole('button', { name: 'Update day' }).click()
+  await expect(page.getByRole('row', { name: /Nov 23/ })).not.toContainText('Not complete')
+})
+
 test('edits and deletes a day', async ({ page }) => {
   await openLog(page)
   await page.getByLabel('Weight', { exact: true }).fill('180')

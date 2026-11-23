@@ -118,6 +118,16 @@ test('leaves out a day that looks like a forgotten meal and says so', async ({ p
   await expect(page.getByText('26 days, Oct 27 to Nov 22; 1 part-logged left out')).toBeVisible()
 })
 
+test('leaves out a day the user marked as not complete', async ({ page }) => {
+  // Day 10 (Nov 6) logged the usual 2,000 but was ticked; the numbers match the forgotten-meal case.
+  const log = steadyLog(28).map((entry, i) => (i === 10 ? { ...entry, incomplete: true } : entry))
+  await openCheckIn(page, { form: averageManCut, log })
+  await expect(page.getByTestId('checkin-notices')).toContainText('Left out the day you marked as not complete (Nov 6).')
+  await expect(page.getByTestId('expenditure')).toHaveText('2,330')
+  await expect(page.getByText('Likely between 2,120 and 2,540.')).toBeVisible()
+  await expect(page.getByTestId('suggested-calories')).toHaveText('1,944')
+})
+
 test('leans more on the formula when only some days are logged', async ({ page }) => {
   const log = steadyLog(28).map((entry, i) => (i % 2 === 0 ? entry : { date: entry.date, weightKg: entry.weightKg }))
   await openCheckIn(page, { form: averageManCut, log })
