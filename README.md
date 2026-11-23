@@ -37,22 +37,44 @@ returning visitor lands straight on their results.
 
 1. **Resting energy (BMR)** with the Mifflin-St Jeor equation:
    `10 × kg + 6.25 × cm − 5 × age`, then `+5` for men and `−161` for women.
-   "Other" uses the average of the two (`−78`).
-2. **Maintenance** = BMR × activity factor (1.2 mostly sitting to 1.9 athlete).
-3. **Goal:** lose fat = maintenance minus 20%, but never more than 500 calories;
-   maintain = maintenance; build muscle = maintenance + 300.
-4. **Calorie floor:** never below 1,200 (women), 1,500 (men) or 1,350 (other). When the floor
-   applies, the results say so.
+   "Other" uses the average of the two (`−78`). It is the best-tested equation for adults,
+   and still more than 10% off for about one person in four
+   ([Frankenfield 2013](https://pubmed.ncbi.nlm.nih.gov/23631843/)).
+2. **Maintenance** = BMR × activity factor (1.2 mostly sitting to 1.9 athlete). The activity
+   choices name both the job and the training, because people who sit at work and lift tend to
+   pick too high.
+3. **Goal pace,** as a share of body weight per week:
+   - Lose fat: 0.25%, 0.5% (default), 0.75% or 1%. Losing 0.5 to 1% a week helps keep muscle
+     ([Helms et al. 2014](https://pmc.ncbi.nlm.nih.gov/articles/PMC4033492)).
+   - Build muscle: 0.15%, 0.25% (default) or 0.5%. Newer lifters can gain faster; experienced
+     ones should go slower ([Iraki et al. 2019](https://pmc.ncbi.nlm.nih.gov/articles/PMC6680710)).
+   - The pace becomes calories at 7,700 calories per kg of body weight, the simple rule Hall
+     found fits weight change over months reasonably well
+     ([Hall 2008](https://pmc.ncbi.nlm.nih.gov/articles/PMC2376744)). The first weeks of a diet
+     lose more water, so the scale moves faster at first.
+   - The deficit is capped at 25% of maintenance and the surplus at 20%, and the results say
+     when a cap applies. The results show the expected change in lb or kg per week.
+4. **Calorie floor, fat loss only:** not below 1,200 (women), 1,500 (men) or 1,350 (other). This
+   is a common rule of thumb, not a formal guideline. It never pushes a target above
+   maintenance: if maintenance is already below the floor, the fat loss target is maintenance
+   and the results suggest planning any loss with a doctor or dietitian. When the floor applies,
+   the results say so.
 5. **Protein:** 2.2 g per kg when losing fat, 1.8 g per kg otherwise. Muscle gains level off at
-   around 1.6 g/kg ([Morton et al. 2018](https://pubmed.ncbi.nlm.nih.gov/28698222/)), and a bit
-   more helps keep muscle during a cut. Above a BMI of 25 the weight used is the weight at BMI 25
-   for that height, because total weight overstates muscle at higher body fat. Capped at 40% of
-   calories.
-6. **Fat:** 25% of calories. **Carbs:** the rest, always at least about 35%.
+   around 1.6 g/kg ([Morton et al. 2018](https://pubmed.ncbi.nlm.nih.gov/28698222/)), and more
+   helps keep muscle during a cut ([ISSN 2017](https://pubmed.ncbi.nlm.nih.gov/28642676/)). Above
+   a BMI of 25 the weight used is the weight at BMI 25 for that height, because total weight
+   overstates muscle at higher body fat. Capped at 40% of calories.
+6. **Fat:** 25% of calories, inside the 20 to 35% of the US Dietary Guidelines. **Carbs:** the
+   rest, always at least about 35%.
 
-Fat loss plans are not offered under 18. These are estimates: real energy needs can be a few
-hundred calories away from any formula, which is why the results suggest checking your weight
-trend after 2 to 3 weeks.
+Fat loss plans are not offered under 18, and under 18 the results note that the formula was
+built from adults. These are estimates: real energy needs can be a few hundred calories away
+from any formula, which is why the results suggest checking your weight trend after 2 to 3
+weeks.
+
+The math was checked against a separate version written from the papers on 3,375 combinations
+of sex, age, weight, height, activity and goal; the unit tests keep worked examples from that
+check and run 9,000 combinations (every pace included) on every push.
 
 ## Built with
 
@@ -74,13 +96,13 @@ e2e/            Playwright tests, including axe accessibility scans
 
 ## Tests
 
-- **80 unit tests** (Vitest) for the math, the checks, unit switching, storage, the log
+- **89 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the log
   (dates across month ends and daylight saving, the trend after gaps, backup files) and the chart. Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
-- **33 end-to-end tests** (Playwright) on a desktop and a touch phone screen (64 runs; one
+- **37 end-to-end tests** (Playwright) on a desktop and a touch phone screen (72 runs; one
   test is mouse-only and one is touch-only), against the production build. They cover the full flow in both unit systems, every error message, unit
-  switching, the calorie floor, the under-18 rule, saved plans, returning visitors, broken saved
+  switching, the goal pace, the calorie floor (and that it never goes above maintenance), the under-18 rule, pill rows on a 320 px phone, saved plans, returning visitors, broken saved
   data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, logging,
   editing and deleting days, backup export and import, the chart with the keyboard, and an
   [axe](https://github.com/dequelabs/axe-core) scan for WCAG 2.1 A and AA rules on every step,
