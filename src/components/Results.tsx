@@ -3,6 +3,8 @@ import type { Goal, MacroPlan, UnitSystem } from '../engine/types'
 import { kgToLb, roundTo } from '../engine/units'
 import { splitAcrossMeals } from '../engine/calculate'
 import type { SavedPlan } from '../storage'
+import type { CheckIn } from '../coach/checkins'
+import { formatDay } from '../log/dates'
 import { Choice } from './fields'
 import { MacroRing, MACROS } from './MacroRing'
 import { AlertIcon, TrashIcon } from './Icons'
@@ -17,6 +19,8 @@ interface ResultsProps {
   pace: number | null
   unit: UnitSystem
   savedPlans: SavedPlan[]
+  /** The newest saved weekly check-in, shown above the formula plan. */
+  latestCheckIn: CheckIn | null
   canShare: boolean
   onGoalChange: (goal: Goal) => void
   onPaceChange: (pace: number) => void
@@ -66,6 +70,16 @@ export function Results(props: ResultsProps) {
           ) : null}
         </p>
       </div>
+
+      {props.latestCheckIn ? (
+        <p className="checkin-banner" data-testid="checkin-banner">
+          Your check-in on {formatDay(props.latestCheckIn.date)} measured maintenance at about{' '}
+          {(Math.round(props.latestCheckIn.expenditure / 10) * 10).toLocaleString('en-US')} and set{' '}
+          <strong>{props.latestCheckIn.calories.toLocaleString('en-US')} calories</strong>
+          {props.latestCheckIn.goal !== props.goal ? ` for ${GOAL_LABELS[props.latestCheckIn.goal].toLowerCase()}` : ''}. The numbers below are the formula.{' '}
+          <a href="#checkin">Open the check-in</a>
+        </p>
+      ) : null}
 
       <div className="card">
         <MacroRing plan={plan} />
@@ -190,7 +204,7 @@ export function Results(props: ResultsProps) {
           </div>
         </dl>
         <p className="fine-print">
-          The pace turns into calories at about 7,700 calories per kg of body weight (Hall, 2008), with the deficit capped at 25% of maintenance and the
+          The pace turns into calories at {plan.breakdown.caloriesPerKg.toLocaleString('en-US')} calories per kg for your body: a kg of fat holds about 9,440 calories and a kg of lean tissue about 1,820 (Hall, 2008), and leaner people lose more lean per kg (Forbes). The deficit is capped at 25% of maintenance and the
           surplus at 20%. Fat loss paces follow Helms et al. (2014), muscle gain paces Iraki et al. (2019). Fat loss never goes below 1,200 calories for
           women or 1,500 for men, a common rule of thumb, or above maintenance. Above a BMI of 25, protein uses the weight at BMI 25 for your height, because total weight
           overstates muscle. Protein research: Morton et al., 2018.

@@ -10,6 +10,7 @@ import { Wizard } from './components/Wizard'
 import { planAsText, Results } from './components/Results'
 import { LogView } from './components/LogView'
 import { CheckInView } from './components/CheckInView'
+import { loadCheckIns } from './coach/checkins'
 
 type View = { name: 'steps'; step: number } | { name: 'results' }
 type Tab = 'plan' | 'log' | 'checkin'
@@ -136,6 +137,7 @@ export default function App() {
             pace={form.pace}
             unit={form.unit}
             savedPlans={savedPlans}
+            latestCheckIn={loadCheckIns().pop() ?? null}
             canShare={typeof navigator.share === 'function'}
             onGoalChange={changeGoal}
             onPaceChange={pace => dispatch({ type: 'set', field: 'pace', value: pace })}

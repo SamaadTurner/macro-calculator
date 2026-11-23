@@ -1508,3 +1508,17 @@ a.btn {
 .checkin-table td.food small {
   white-space: normal;
 }
+
+.checkin-banner {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--accent-line);
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.checkin-banner a {
+  font-weight: 700;
+  color: var(--accent);
+}

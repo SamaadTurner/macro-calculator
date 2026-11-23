@@ -70,12 +70,12 @@ test('shows what is still needed before the first estimate', async ({ page }) =>
 
 test('estimates maintenance from 4 weeks of log and saves a check-in', async ({ page }) => {
   await openCheckIn(page, { form: averageManCut, log: steadyLog(28) })
-  await expect(page.getByTestId('expenditure')).toHaveText('2,310')
-  await expect(page.getByTestId('data-share')).toHaveText('98%')
-  await expect(page.getByText('Likely between 2,190 and 2,430.')).toBeVisible()
-  await expect(page.getByTestId('suggested-calories')).toHaveText('1,924')
-  await expect(page.getByTestId('suggested-macros')).toHaveText('Protein 174g · Carbs 188g · Fats 53g')
-  await expect(page.getByTestId('target-change')).toHaveText('Down 390 from your plan (2,314).')
+  await expect(page.getByTestId('expenditure')).toHaveText('2,330')
+  await expect(page.getByTestId('data-share')).toHaveText('94%')
+  await expect(page.getByText('Likely between 2,130 and 2,530.')).toBeVisible()
+  await expect(page.getByTestId('suggested-calories')).toHaveText('1,943')
+  await expect(page.getByTestId('suggested-macros')).toHaveText('Protein 174g · Carbs 190g · Fats 54g')
+  await expect(page.getByTestId('target-change')).toHaveText('Down 434 from your plan (2,377).')
 
   await page.getByText('How this was worked out').click()
   await expect(page.getByRole('definition').filter({ hasText: '−0.7 lb a week' })).toBeVisible()
@@ -86,12 +86,21 @@ test('estimates maintenance from 4 weeks of log and saves a check-in', async ({ 
   await expect(page.getByTestId('checkin-status')).toHaveText('Checked in today. Next check-in on Nov 30.')
   await expect(page.getByTestId('target-change')).toHaveText('Same as your last check-in.')
   const row = page.getByRole('row', { name: /Nov 23/ })
-  await expect(row).toContainText('2,310 cal')
-  await expect(row).toContainText('1,924 cal')
+  await expect(row).toContainText('2,330 cal')
+  await expect(row).toContainText('1,943 cal')
 
   await page.reload()
   await expect(page.getByRole('row', { name: /Nov 23/ })).toBeVisible()
   await expect(page.getByRole('button', { name: "Update today's check-in" })).toBeVisible()
+
+  // The Plan tab points to the check-in and keeps showing the formula below it.
+  await page.getByRole('link', { name: 'Plan', exact: true }).click()
+  await expect(page.getByTestId('checkin-banner')).toHaveText(
+    'Your check-in on Nov 23 measured maintenance at about 2,330 and set 1,943 calories. The numbers below are the formula. Open the check-in',
+  )
+  await expect(page.getByTestId('calories')).toHaveText('2,377')
+  await page.getByRole('link', { name: 'Open the check-in' }).click()
+  await expect(page.getByRole('heading', { name: 'What you really burn' })).toBeVisible()
 })
 
 test('moves at most 200 calories a week from the last check-in', async ({ page }) => {
@@ -99,7 +108,7 @@ test('moves at most 200 calories a week from the last check-in', async ({ page }
   await openCheckIn(page, { form: averageManCut, log: steadyLog(28), checkins: [lastWeek] })
   await expect(page.getByTestId('checkin-status')).toHaveText('Last check-in Nov 16. A new one is due.')
   await expect(page.getByTestId('expenditure')).toHaveText('2,800')
-  await expect(page.getByText('Your log points to 2,310 calories.')).toBeVisible()
+  await expect(page.getByText('Your log points to 2,330 calories.')).toBeVisible()
   await expect(page.getByTestId('suggested-calories')).toHaveText('2,413')
   await expect(page.getByTestId('target-change')).toHaveText('Down 137 from your last check-in (2,550).')
 })
@@ -123,6 +132,9 @@ test.describe('accessibility', () => {
     await page.getByText('How this was worked out').click()
     await page.getByRole('button', { name: 'Save check-in' }).click()
     await expectNoViolations(page)
+    await page.getByRole('link', { name: 'Plan', exact: true }).click()
+    await expect(page.getByTestId('checkin-banner')).toBeVisible()
+    await expectNoViolations(page)
   })
 
   test.describe('dark mode', () => {
@@ -131,6 +143,9 @@ test.describe('accessibility', () => {
     test('passes axe checks in dark mode', async ({ page }) => {
       const lastWeek = { date: isoDaysAgo(7), expenditure: 3000, calories: 2550, protein: 174, carbs: 300, fats: 71, goal: 'cutting' }
       await openCheckIn(page, { form: averageManCut, log: steadyLog(28), checkins: [lastWeek] })
+      await expectNoViolations(page)
+      await page.getByRole('link', { name: 'Plan', exact: true }).click()
+      await expect(page.getByTestId('checkin-banner')).toBeVisible()
       await expectNoViolations(page)
     })
   })
