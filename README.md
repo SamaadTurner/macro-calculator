@@ -6,13 +6,16 @@ active you are, and your goal (lose fat, maintain or build muscle).
 **Live:** https://samaadturner.github.io/macro-calculator/
 
 <p>
-  <img src="docs/screenshots/goal-step.png" alt="Goal step with three goal cards" width="260">
-  <img src="docs/screenshots/results.png" alt="Results page with a macro ring and grams per macro" width="260">
-  <img src="docs/screenshots/results-dark.png" alt="The same results page in dark mode" width="260">
+  <img src="docs/screenshots/goal-step.png" alt="Goal step with goal cards and a pace choice" width="200">
+  <img src="docs/screenshots/results.png" alt="Results page with a macro ring and grams per macro" width="200">
+  <img src="docs/screenshots/log.png" alt="Log tab with the weight trend chart and the history" width="200">
+  <img src="docs/screenshots/checkin.png" alt="Check-in tab with the estimated maintenance and suggested targets" width="200">
+  <img src="docs/screenshots/results-dark.png" alt="The results page in dark mode" width="200">
 </p>
 
-No sign-up and no server. Answers and saved plans stay in the browser's local storage, so a
-returning visitor lands straight on their results.
+No sign-up and no server. Answers, saved plans and the log stay in the browser's local storage,
+so a returning visitor lands straight on their results. It installs to a phone's home screen
+and works offline.
 
 ## What it does
 
@@ -23,6 +26,10 @@ returning visitor lands straight on their results.
   updates the numbers right away, grams per meal for 3 to 6 meals, and the working behind the
   numbers.
 - Save up to ten plans on the device, copy a plan as text, or share it from a phone.
+- Install it from the browser (Add to Home Screen, or the install button in Chrome and Edge). After
+  the first visit a service worker keeps a copy of every file, so the app opens and saves with
+  no connection. When a new version is out, a banner offers Reload; it never reloads by itself,
+  so a half-typed log entry is not lost.
 - A daily log (the Log tab): weight, calories eaten and optional protein, carbs and fats for
   each day, with a tick for "not all of this day's food is logged". A chart shows each weigh-in and a smoothed trend (an exponential moving average
   that moves 10% toward each new weigh-in, from John Walker's *The Hacker's Diet*), the trend
@@ -236,7 +243,10 @@ React 18 and TypeScript on Vite. No UI or chart library: the ring is a small SVG
 the styles are one CSS file of design tokens (colours, type, spacing) in
 [`src/styles.css`](src/styles.css), with a light set and a dark set. The macro colours were
 checked for colour-blind separation and contrast against both card colours. Fonts (Inter and Barlow Condensed) are bundled, not loaded
-from Google.
+from Google. The offline copy and the app manifest come from
+[vite-plugin-pwa](https://vite-pwa-org.netlify.app/) (Workbox), which lists every built file by
+its hashed name; the icons are drawn from the favicon by
+[`scripts/make-icons.mjs`](scripts/make-icons.mjs).
 
 ```
 src/
@@ -252,19 +262,19 @@ e2e/            Playwright tests, including axe accessibility scans
 
 ## Tests
 
-- **147 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, CSV import (quoting, meal rows, a Completed column, per-measurement weights, date orders, merging), the log
+- **149 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the new-version banner, CSV import (quoting, meal rows, a Completed column, per-measurement weights, date orders, merging), the log
   (dates across month ends and daylight saving, the trend after gaps, backup files), the chart, and the check-in (hand-worked
   energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 35-day window, the weekly limit, forgotten-meal days, ticked days, fasting
   days, patchy logs, splitting at gaps) and the
   simulation (seeded random numbers, energy balance, the water drop, holidays, gaps and forgotten meals, ticks and rough guesses, repeatable results). Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
-- **52 end-to-end tests** (Playwright) on a desktop and a touch phone screen (102 runs; one
+- **54 end-to-end tests** (Playwright) on a desktop and a touch phone screen (106 runs; one
   test is mouse-only and one is touch-only), against the production build. They cover the full flow in both unit systems, every error message, unit
   switching, the goal pace, the calorie floor (and that it never goes above maintenance), the under-18 rule, pill rows on a 320 px phone, saved plans, returning visitors, broken saved
   data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, logging,
   editing and deleting days, the not-complete tick, backup export and import, CSV import (meal rows into daily totals, a per-measurement weight file, a
-  bad file, cancel), the chart with the keyboard, the check-in (exact numbers checked
+  bad file, cancel), the app manifest and icons, working out a plan and saving a log day with the network off, the chart with the keyboard, the check-in (exact numbers checked
   against a separate Python version, saving, the weekly limit, a forgotten-meal day, a ticked day, a patchy log, the link from the Plan tab, three tabs on a 320 px phone), and an
   [axe](https://github.com/dequelabs/axe-core) scan for WCAG 2.1 A and AA rules on every step,
   with and without errors showing, in light and dark mode.
@@ -308,12 +318,15 @@ npm run dev            # http://localhost:5173/macro-calculator/
   Cronometer and MyFitnessPal exports, not on real exports, whose exact headers could not be
   confirmed. A file whose columns are not guessed can still be imported by picking them in the
   dropdowns. Imports must be one file at a time (food and weight files one after the other).
-- `npm audit` reports moderate advisories in development-only packages (the Vite dev server and
-  Vitest). None of that code is in the built site.
+- `npm audit` reports advisories in development-only packages: critical and high ones in Vitest,
+  Tinypool and the Vite dev server (fixed in newer major versions, an upgrade still to do), and
+  moderate ones in the build tools (typescript-eslint, and glob in the service worker builder).
+  None of that code is in the built site.
 
 ## Planned
 
-An installable offline app.
+Gentle, optional habit features (reminders without streaks, diet breaks and maintenance
+phases), and maybe food search and barcode lookup.
 
 ## License
 
