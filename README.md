@@ -36,8 +36,7 @@ and works offline.
   weight, and how much it moved over the last 7 days. The chart has a hover readout and can be
   read with the arrow keys; the history table below it lists every number.
 - Add from a food: search [Open Food Facts](https://world.openfoodfacts.org) by name or barcode
-  (typed, or scanned with the camera where the browser has a built-in barcode reader, such as
-  Chrome on Android), pick the amount in grams (one serving is filled in when the package gives
+  (typed, or scanned with the camera in any browser), pick the amount in grams (one serving is filled in when the package gives
   its weight), and its calories and macros are added to the day being typed. Several foods add
   up; the day is still saved as a daily total. Searches go to their search service
   (search.openfoodfacts.org), which returns names and brands; picking one loads that
@@ -46,6 +45,13 @@ and works offline.
   typing, and the app stays under Open Food Facts' limits (8 searches and 12 barcode lookups a
   minute, against their 10 and 15). Typed barcodes are checked with their check digit before a
   lookup is spent. Food data is under the Open Database License.
+- A scan button on every tab (bottom right) opens the camera straight away. After the amount,
+  the food goes into today's log; on the Log tab it fills the form instead, like the panel
+  there. Browsers with a built-in barcode reader (Chrome on Android) use it; the others
+  (Safari, Firefox, Chrome on Windows) load a bundled one, [zxing-wasm](https://github.com/Sec-ant/zxing-wasm)
+  through [barcode-detector](https://github.com/Sec-ant/barcode-detector), the first time the
+  camera opens. Its 950 KB WebAssembly file is served from this site, not a CDN, and is not part
+  of the offline copy (a lookup needs the internet anyway).
 - A weekly check-in (the Check-in tab) that estimates what you really burn from your log and
   suggests new targets. See below.
 - Export the log as a JSON backup and import it on another device. Days in the backup replace
@@ -281,6 +287,7 @@ src/
   form.ts       form state, unit switching, which step is complete
   storage.ts    local storage, guarded against blocked or broken data
   log/          the daily log: dates, entries, form checks, trend, backup files, CSV import
+  food/         Open Food Facts lookups and the barcode reader
   coach/        the weekly check-in: the expenditure estimate and saved check-ins
   components/   the steps, the results page, the ring, the log and check-in pages and the weight chart
 sim/            the simulation study: body model, simulated people, settings search
@@ -289,15 +296,15 @@ e2e/            Playwright tests, including axe accessibility scans
 
 ## Tests
 
-- **180 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the new-version banner, CSV import (quoting, meal rows, a Completed column, per-measurement weights, date orders, merging), the log
+- **183 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the new-version banner, CSV import (quoting, meal rows, a Completed column, per-measurement weights, date orders, merging), the log
   (dates across month ends and daylight saving, the trend after gaps, backup files), the chart, and the check-in (hand-worked
   energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 35-day window, the weekly limit, forgotten-meal days, ticked days, fasting
   days, patchy logs, splitting at gaps), maintenance breaks (saving, when one is running, counting weeks of fat loss), the reminder calendar file, food lookups (reading search results and products, kJ-only products, scaling to grams, barcode check digits, the
-  per-minute limit, errors, adding foods to the day without rounding drift), and the
+  per-minute limit, errors, adding foods to the day without rounding drift, saving a scanned food into a day and refusing amounts over the limits), and the
   simulation (seeded random numbers, energy balance, the water drop, holidays, gaps and forgotten meals, ticks and rough guesses, repeatable results). Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
-- **71 end-to-end tests** (Playwright) on a desktop and a touch phone screen (140 runs; one
+- **80 end-to-end tests** (Playwright) on a desktop and a touch phone screen (158 runs; one
   test is mouse-only and one is touch-only), against the production build. They cover the full flow in both unit systems, every error message, unit
   switching, the goal pace, the calorie floor (and that it never goes above maintenance), the under-18 rule, pill rows on a 320 px phone, saved plans, returning visitors, broken saved
   data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, logging,
@@ -307,7 +314,10 @@ e2e/            Playwright tests, including axe accessibility scans
   12-week suggestion, a finished break), the reminder download, the support line on every tab, food search and barcode lookup against a fake Open Food Facts
   (two foods adding up, Enter searching instead of saving, a product with no calories, a bad
   check digit, a missing product,
-  a busy or unreachable service, a camera scan with a fake barcode reader), and an
+  a busy or unreachable service, a camera scan), the scan button on every tab (saving into
+  today from the Plan tab, filling the form on the Log tab, no camera, a refused camera,
+  closing mid-scan stops the camera, and the bundled reader decoding a real EAN-13 drawn on a
+  fake camera, with its .wasm file served from the site), and an
   [axe](https://github.com/dequelabs/axe-core) scan for WCAG 2.1 A and AA rules on every step,
   with and without errors showing, in light and dark mode.
 
@@ -344,8 +354,9 @@ npm run dev            # http://localhost:5173/macro-calculator/
   Open Food Facts asks apps to name themselves in the User-Agent; a web page cannot, and an
   extra header made Chrome's CORS preflight fail, so requests are plain and carry the browser's
   own User-Agent. Their older search address (/cgi/search.pl) answered 503 often enough in
-  testing that the app uses the newer search service instead. Camera scanning needs the browser's barcode reader (not in Safari or Firefox);
-  typing the digits works everywhere.
+  testing that the app uses the newer search service instead. The camera needs
+  permission; without it, or without a camera, the digits can be typed. Scanning was tested
+  with a fake camera only, not yet on real phones.
 - The weekly reminder is a calendar event, not a notification from the app. The support line
   gives US numbers; elsewhere it points to a doctor.
 - Days with no food logged are left out of the check-in, but a gap where you ate more than
