@@ -35,6 +35,15 @@ and works offline.
   that moves 10% toward each new weigh-in, from John Walker's *The Hacker's Diet*), the trend
   weight, and how much it moved over the last 7 days. The chart has a hover readout and can be
   read with the arrow keys; the history table below it lists every number.
+- Add from a food: search [Open Food Facts](https://world.openfoodfacts.org) by name or barcode
+  (typed, or scanned with the camera where the browser has a built-in barcode reader, such as
+  Chrome on Android), pick the amount in grams (one serving is filled in when the package gives
+  its weight), and its calories and macros are added to the day being typed. Several foods add
+  up; the day is still saved as a daily total. Only the search words or the barcode are sent;
+  nothing from the log leaves the device. Searches run when you press Search, never while
+  typing, and the app stays under Open Food Facts' limits (8 searches and 12 barcode lookups a
+  minute, against their 10 and 15). Typed barcodes are checked with their check digit before a
+  lookup is spent. Food data is under the Open Database License.
 - A weekly check-in (the Check-in tab) that estimates what you really burn from your log and
   suggests new targets. See below.
 - Export the log as a JSON backup and import it on another device. Days in the backup replace
@@ -278,21 +287,24 @@ e2e/            Playwright tests, including axe accessibility scans
 
 ## Tests
 
-- **159 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the new-version banner, CSV import (quoting, meal rows, a Completed column, per-measurement weights, date orders, merging), the log
+- **177 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the new-version banner, CSV import (quoting, meal rows, a Completed column, per-measurement weights, date orders, merging), the log
   (dates across month ends and daylight saving, the trend after gaps, backup files), the chart, and the check-in (hand-worked
   energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 35-day window, the weekly limit, forgotten-meal days, ticked days, fasting
-  days, patchy logs, splitting at gaps), maintenance breaks (saving, when one is running, counting weeks of fat loss), the reminder calendar file, and the
+  days, patchy logs, splitting at gaps), maintenance breaks (saving, when one is running, counting weeks of fat loss), the reminder calendar file, food lookups (reading products, kJ-only products, scaling to grams, barcode check digits, the
+  per-minute limit, errors, adding foods to the day without rounding drift), and the
   simulation (seeded random numbers, energy balance, the water drop, holidays, gaps and forgotten meals, ticks and rough guesses, repeatable results). Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
-- **61 end-to-end tests** (Playwright) on a desktop and a touch phone screen (120 runs; one
+- **70 end-to-end tests** (Playwright) on a desktop and a touch phone screen (138 runs; one
   test is mouse-only and one is touch-only), against the production build. They cover the full flow in both unit systems, every error message, unit
   switching, the goal pace, the calorie floor (and that it never goes above maintenance), the under-18 rule, pill rows on a 320 px phone, saved plans, returning visitors, broken saved
   data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, logging,
   editing and deleting days, the not-complete tick, backup export and import, CSV import (meal rows into daily totals, a per-measurement weight file, a
   bad file, cancel), the app manifest and icons, working out a plan and saving a log day with the network off, the chart with the keyboard, the check-in (exact numbers checked
   against a separate Python version, saving, the weekly limit, a forgotten-meal day, a ticked day, a patchy log, the link from the Plan tab, three tabs on a 320 px phone), maintenance breaks (taking, saving, reloading, ending, the
-  12-week suggestion, a finished break), the reminder download, the support line on every tab, and an
+  12-week suggestion, a finished break), the reminder download, the support line on every tab, food search and barcode lookup against a fake Open Food Facts
+  (two foods adding up, Enter searching instead of saving, a bad check digit, a missing product,
+  a busy or unreachable service, a camera scan with a fake barcode reader), and an
   [axe](https://github.com/dequelabs/axe-core) scan for WCAG 2.1 A and AA rules on every step,
   with and without errors showing, in light and dark mode.
 
@@ -324,6 +336,12 @@ npm run dev            # http://localhost:5173/macro-calculator/
 - The Plan tab shows the formula; the measured targets are on the Check-in tab (the Plan tab
   links to the latest one).
 - The check-in's accuracy is measured on simulated people only (see above), not real users.
+- Food data comes from volunteers and can be wrong or missing; the panel says to check the
+  label. It is strongest for packaged foods; plain foods ("chicken breast") give mixed results.
+  Open Food Facts asks apps to name themselves in the User-Agent; a web page cannot, and an
+  extra header made Chrome's CORS preflight fail, so requests are plain and carry the browser's
+  own User-Agent. Camera scanning needs the browser's barcode reader (not in Safari or Firefox);
+  typing the digits works everywhere.
 - The weekly reminder is a calendar event, not a notification from the app. The support line
   gives US numbers; elsewhere it points to a doctor.
 - Days with no food logged are left out of the check-in, but a gap where you ate more than
@@ -342,10 +360,6 @@ npm run dev            # http://localhost:5173/macro-calculator/
   14 (the version it asks for has a moderate advisory); the service worker it builds lists the
   same files. Lint runs on ESLint 10 with a flat config (`eslint.config.js`). Browser tests run on
   Playwright 1.65.
-
-## Planned
-
-Maybe food search and barcode lookup.
 
 ## License
 
