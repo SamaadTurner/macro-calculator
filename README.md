@@ -48,6 +48,12 @@ and works offline.
   is read for body weight only in each row's unit, and a Completed column set to false
   imports the day as not complete. Imported food replaces that day's food and keeps its
   weigh-in, and the other way round.
+- Habits that do not punish a missed day: no streaks, badges or daily nags. An optional weekly
+  check-in reminder is a calendar file you add to your own calendar (the app cannot send
+  notifications without a server). During a fat loss phase the check-in offers a 1 or 2 week
+  maintenance break, and after 12 weeks of fat loss in a row it suggests one; the fat loss
+  targets come back by themselves when the break ends. Every tab ends with a short line for
+  anyone stressed about food or weight, with ANAD's free US helpline and 988.
 - Light and dark themes in warm gym colours (cream walls, wood, black iron), following the
   phone's setting.
 
@@ -139,6 +145,16 @@ weigh-ins spread over at least 10 days and 7 days with calories. The page says w
 far (35%) from the formula and suggests checking the logging, and when fewer than 70% of days
 have calories it says the estimate leans more on the formula. Check-ins are saved on the device
 with a history, and the Plan tab shows the latest one above the formula numbers.
+
+**Maintenance breaks.** Studies of diet breaks disagree on fat loss: two weeks on, two weeks
+off did better in [MATADOR (Byrne 2018)](https://pubmed.ncbi.nlm.nih.gov/28925405/), and one
+week off every three gave the same fat loss with less appetite in
+[ICECAP (Peos 2021)](https://pubmed.ncbi.nlm.nih.gov/33587549/). So a break is offered on the Check-in tab and
+suggested after 12 weeks of fat loss check-ins in a row (a check-in with another goal, a
+finished break, or more than four weeks without a check-in starts the count again), never
+pushed. During one the suggested targets are maintenance and check-ins save as maintain; the
+plan's goal is not changed. The targets never go under the fat loss floor, break or not,
+unless maintenance itself is lower.
 
 ## How accurate the check-in is (simulation study)
 
@@ -262,20 +278,21 @@ e2e/            Playwright tests, including axe accessibility scans
 
 ## Tests
 
-- **149 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the new-version banner, CSV import (quoting, meal rows, a Completed column, per-measurement weights, date orders, merging), the log
+- **159 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the new-version banner, CSV import (quoting, meal rows, a Completed column, per-measurement weights, date orders, merging), the log
   (dates across month ends and daylight saving, the trend after gaps, backup files), the chart, and the check-in (hand-worked
   energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 35-day window, the weekly limit, forgotten-meal days, ticked days, fasting
-  days, patchy logs, splitting at gaps) and the
+  days, patchy logs, splitting at gaps), maintenance breaks (saving, when one is running, counting weeks of fat loss), the reminder calendar file, and the
   simulation (seeded random numbers, energy balance, the water drop, holidays, gaps and forgotten meals, ticks and rough guesses, repeatable results). Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
-- **54 end-to-end tests** (Playwright) on a desktop and a touch phone screen (106 runs; one
+- **61 end-to-end tests** (Playwright) on a desktop and a touch phone screen (120 runs; one
   test is mouse-only and one is touch-only), against the production build. They cover the full flow in both unit systems, every error message, unit
   switching, the goal pace, the calorie floor (and that it never goes above maintenance), the under-18 rule, pill rows on a 320 px phone, saved plans, returning visitors, broken saved
   data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, logging,
   editing and deleting days, the not-complete tick, backup export and import, CSV import (meal rows into daily totals, a per-measurement weight file, a
   bad file, cancel), the app manifest and icons, working out a plan and saving a log day with the network off, the chart with the keyboard, the check-in (exact numbers checked
-  against a separate Python version, saving, the weekly limit, a forgotten-meal day, a ticked day, a patchy log, the link from the Plan tab, three tabs on a 320 px phone), and an
+  against a separate Python version, saving, the weekly limit, a forgotten-meal day, a ticked day, a patchy log, the link from the Plan tab, three tabs on a 320 px phone), maintenance breaks (taking, saving, reloading, ending, the
+  12-week suggestion, a finished break), the reminder download, the support line on every tab, and an
   [axe](https://github.com/dequelabs/axe-core) scan for WCAG 2.1 A and AA rules on every step,
   with and without errors showing, in light and dark mode.
 
@@ -307,6 +324,8 @@ npm run dev            # http://localhost:5173/macro-calculator/
 - The Plan tab shows the formula; the measured targets are on the Check-in tab (the Plan tab
   links to the latest one).
 - The check-in's accuracy is measured on simulated people only (see above), not real users.
+- The weekly reminder is a calendar event, not a notification from the app. The support line
+  gives US numbers; elsewhere it points to a doctor.
 - Days with no food logged are left out of the check-in, but a gap where you ate more than
   usual still pulls the estimate low (the page says so when under 70% of days are logged, and
   the estimate leans on the formula). A forgotten meal you did not tick is only caught when the
@@ -326,8 +345,7 @@ npm run dev            # http://localhost:5173/macro-calculator/
 
 ## Planned
 
-Gentle, optional habit features (reminders without streaks, diet breaks and maintenance
-phases), and maybe food search and barcode lookup.
+Maybe food search and barcode lookup.
 
 ## License
 
