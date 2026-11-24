@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addDays, daysBetween, isIsoDate, todayIso } from './dates'
 import type { LogEntry } from './entries'
 import { cleanEntry, loadLog, removeEntry, saveLog, upsertEntry } from './entries'
-import { draftErrors, draftToEntry, emptyDraft, entryToDraft } from './draft'
+import { addFoodToDraft, draftErrors, draftToEntry, emptyDraft, entryToDraft } from './draft'
 import { trendChange, weightTrend } from './trend'
 import { BACKUP_FORMAT, backupText, mergeBackup, readBackup } from './backup'
 import { lbToKg } from '../engine/units'
@@ -214,5 +214,38 @@ describe('backup', () => {
     expect(merged.added).toBe(1)
     expect(merged.replaced).toBe(1)
     expect(merged.entries.map(entry => entry.weightKg)).toEqual([80.4, 80, 79.8])
+  })
+})
+
+describe('addFoodToDraft', () => {
+  const food = { calories: 81, protein: 0.9, carbs: 8.6, fats: 4.6 }
+
+  it('fills empty boxes and adds to typed numbers', () => {
+    const empty = emptyDraft('2026-11-24')
+    expect(addFoodToDraft(empty, food)).toMatchObject({ calories: '81', protein: '0.9', carbs: '8.6', fats: '4.6' })
+    const typed = { ...empty, calories: '1200', protein: '100', carbs: '', fats: '40.2' }
+    expect(addFoodToDraft(typed, food)).toMatchObject({ calories: '1281', protein: '100.9', carbs: '8.6', fats: '44.8' })
+  })
+
+  it('adds several foods without rounding drift, and the saved day rounds macros', () => {
+    let draft = emptyDraft('2026-11-24')
+    for (let i = 0; i < 3; i++) draft = addFoodToDraft(draft, food)
+    expect(draft).toMatchObject({ calories: '243', protein: '2.7', carbs: '25.8', fats: '13.8' })
+    expect(draftToEntry(draft, 'metric')).toMatchObject({ calories: 243, protein: 3, carbs: 26, fats: 14 })
+  })
+
+  it('leaves an unknown macro and a box with a typo alone', () => {
+    const draft = { ...emptyDraft('2026-11-24'), carbs: 'abc' }
+    expect(addFoodToDraft(draft, { calories: 128, protein: null, carbs: 10, fats: null })).toMatchObject({
+      calories: '128',
+      protein: '',
+      carbs: 'abc',
+      fats: '',
+    })
+  })
+
+  it('keeps the date, weight and tick', () => {
+    const draft = { ...emptyDraft('2026-11-20'), weight: '180', incomplete: true }
+    expect(addFoodToDraft(draft, food)).toMatchObject({ date: '2026-11-20', weight: '180', incomplete: true })
   })
 })
