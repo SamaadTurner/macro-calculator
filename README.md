@@ -36,8 +36,9 @@ and works offline.
   weight, and how much it moved over the last 7 days. The chart has a hover readout and can be
   read with the arrow keys; the history table below it lists every number.
 - Add from a food: search [Open Food Facts](https://world.openfoodfacts.org) by name or barcode
-  (typed, or scanned with the camera in any browser), pick the amount in grams (one serving is filled in when the package gives
-  its weight), and its calories and macros are added to the day being typed. Several foods add
+  (typed, or scanned with the camera in any browser), pick the amount the way the big logging
+  apps do it (a serving size, the one on the package or grams / millilitres, and a number of
+  servings that starts at 1), and its calories and macros are added to the day being typed. Several foods add
   up; the day is still saved as a daily total. Searches go to their search service
   (search.openfoodfacts.org), which returns names and brands; picking one loads that
   product's numbers. Only the search words, the picked product's code or the barcode are
@@ -45,7 +46,9 @@ and works offline.
   typing, and the app stays under Open Food Facts' limits (8 searches and 12 barcode lookups a
   minute, against their 10 and 15). Typed barcodes are checked with their check digit before a
   lookup is spent. Food data is under the Open Database License.
-- A scan button on every tab (bottom right) opens the camera straight away. After the amount,
+- A "Scan food" button on every tab (bottom right) opens the camera straight away, with a box
+  to line the barcode up in, a moving scan line, a flashlight button on phones whose camera has
+  one, and a short buzz when a code is read. After the amount,
   the food goes into today's log; on the Log tab it fills the form instead, like the panel
   there. Browsers with a built-in barcode reader (Chrome on Android) use it; the others
   (Safari, Firefox, Chrome on Windows) load a bundled one, [zxing-wasm](https://github.com/Sec-ant/zxing-wasm)
@@ -296,15 +299,15 @@ e2e/            Playwright tests, including axe accessibility scans
 
 ## Tests
 
-- **183 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the new-version banner, CSV import (quoting, meal rows, a Completed column, per-measurement weights, date orders, merging), the log
+- **187 unit tests** (Vitest) for the math (worked examples and 9,000 generated plans), the checks, unit switching, storage, the new-version banner, CSV import (quoting, meal rows, a Completed column, per-measurement weights, date orders, merging), the log
   (dates across month ends and daylight saving, the trend after gaps, backup files), the chart, and the check-in (hand-worked
   energy per kg and expenditure examples, scale noise, missed weigh-ins and calories, the 35-day window, the weekly limit, forgotten-meal days, ticked days, fasting
-  days, patchy logs, splitting at gaps), maintenance breaks (saving, when one is running, counting weeks of fat loss), the reminder calendar file, food lookups (reading search results and products, kJ-only products, scaling to grams, barcode check digits, the
+  days, patchy logs, splitting at gaps), maintenance breaks (saving, when one is running, counting weeks of fat loss), the reminder calendar file, food lookups (reading search results and products, label servings and their own numbers, drinks in ml, kJ-only products, scaling to grams, barcode check digits, the
   per-minute limit, errors, adding foods to the day without rounding drift, saving a scanned food into a day and refusing amounts over the limits), and the
   simulation (seeded random numbers, energy balance, the water drop, holidays, gaps and forgotten meals, ticks and rough guesses, repeatable results). Every bug
   fixed in the old single-file version has a test, and one test runs 360 combinations of sex,
   goal, activity and extreme bodies to check no macro goes negative and the shares add to 100.
-- **80 end-to-end tests** (Playwright) on a desktop and a touch phone screen (158 runs; one
+- **82 end-to-end tests** (Playwright) on a desktop and a touch phone screen (162 runs; one
   test is mouse-only and one is touch-only), against the production build. They cover the full flow in both unit systems, every error message, unit
   switching, the goal pace, the calorie floor (and that it never goes above maintenance), the under-18 rule, pill rows on a 320 px phone, saved plans, returning visitors, broken saved
   data, keyboard use, mouse hover versus touch on the ring, no sideways scrolling, logging,
@@ -315,7 +318,8 @@ e2e/            Playwright tests, including axe accessibility scans
   (two foods adding up, Enter searching instead of saving, a product with no calories, a bad
   check digit, a missing product,
   a busy or unreachable service, a camera scan), the scan button on every tab (saving into
-  today from the Plan tab, filling the form on the Log tab, no camera, a refused camera,
+  today from the Plan tab, filling the form on the Log tab, serving size and number of
+  servings, switching to grams, the flashlight, the buzz, no camera, a refused camera,
   closing mid-scan stops the camera, and the bundled reader decoding a real EAN-13 drawn on a
   fake camera, with its .wasm file served from the site), and an
   [axe](https://github.com/dequelabs/axe-core) scan for WCAG 2.1 A and AA rules on every step,
@@ -349,6 +353,11 @@ npm run dev            # http://localhost:5173/macro-calculator/
 - The Plan tab shows the formula; the measured targets are on the Check-in tab (the Plan tab
   links to the latest one).
 - The check-in's accuracy is measured on simulated people only (see above), not real users.
+- US labels give numbers per serving. Open Food Facts keeps those ("_serving" values) next to
+  per-100 g ones, and one serving uses the label's own numbers, so it matches the package. A
+  product with no serving size on file is counted by weight, starting at 100 g, and the page
+  says so; the first version counted everything in grams from 100 g, which gave numbers far
+  from the label when the user expected one serving.
 - Food data comes from volunteers and can be wrong or missing; the panel says to check the
   label. It is strongest for packaged foods; plain foods ("chicken breast") give mixed results.
   Open Food Facts asks apps to name themselves in the User-Agent; a web page cannot, and an
