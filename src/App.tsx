@@ -12,6 +12,10 @@ import { LogView } from './components/LogView'
 import { CheckInView } from './components/CheckInView'
 import { SupportLine } from './components/SupportLine'
 import { UpdateBanner } from './components/UpdateBanner'
+import { ScanSheet } from './components/ScanSheet'
+import { BarcodeIcon } from './components/Icons'
+import type { FoodAmounts } from './log/entries'
+import { addFoodToDay, loadLog, saveLog } from './log/entries'
 import { loadCheckIns } from './coach/checkins'
 import { isBreakActive, loadBreak } from './coach/phases'
 import { todayIso } from './log/dates'
@@ -35,6 +39,9 @@ export default function App() {
   const [toast, setToast] = useState('')
   const [tab, setTab] = useState<Tab>(tabFromHash)
   const toastTimer = useRef<number>()
+  const [scanOpen, setScanOpen] = useState(false)
+  // A food scanned while the Log tab is open goes into its form, like the panel there
+  const [foodForLog, setFoodForLog] = useState<{ id: number; name: string; amounts: FoodAmounts } | null>(null)
 
   useEffect(() => {
     const onHashChange = () => {
@@ -56,6 +63,26 @@ export default function App() {
     setToast(message)
     window.clearTimeout(toastTimer.current)
     toastTimer.current = window.setTimeout(() => setToast(''), 2500)
+  }
+
+  // From the scan button: on the Log tab the food fills the form (the user saves the day as
+  // usual); on the other tabs there is no form, so it is saved straight into today.
+  function handleScannedFood(name: string, amounts: FoodAmounts) {
+    if (tab === 'log') {
+      setFoodForLog({ id: Date.now(), name, amounts })
+      return
+    }
+    const next = addFoodToDay(loadLog(), todayIso(), amounts)
+    if (!next) {
+      showToast('That would put today over the log limit. Check the amount.')
+      return
+    }
+    if (!saveLog(next)) {
+      showToast('Could not save. Your browser is blocking storage.')
+      return
+    }
+    const total = next.find(entry => entry.date === todayIso())?.calories ?? 0
+    showToast(`Added ${name} (${amounts.calories.toLocaleString('en-US')} cal) to today. Today: ${total.toLocaleString('en-US')} cal.`)
   }
 
   function showResults() {
@@ -138,7 +165,13 @@ export default function App() {
         {tab === 'checkin' ? (
           <CheckInView person={person} planCalories={plan?.calories ?? null} unit={form.unit} showToast={showToast} />
         ) : tab === 'log' ? (
-          <LogView unit={form.unit} onUnitChange={unit => dispatch({ type: 'switchUnit', unit })} showToast={showToast} />
+          <LogView
+            unit={form.unit}
+            onUnitChange={unit => dispatch({ type: 'switchUnit', unit })}
+            showToast={showToast}
+            incomingFood={foodForLog}
+            onIncomingFoodUsed={() => setFoodForLog(null)}
+          />
         ) : showingResults ? (
           <Results
             plan={plan}
@@ -182,6 +215,11 @@ export default function App() {
           </a>
         </p>
       </footer>
+
+      <button type="button" className="scan-button" onClick={() => setScanOpen(true)} aria-label="Scan a barcode" title="Scan a barcode">
+        <BarcodeIcon size={26} />
+      </button>
+      <ScanSheet open={scanOpen} addLabel={tab === 'log' ? 'Add to the form' : 'Add to today'} onAdd={handleScannedFood} onClose={() => setScanOpen(false)} />
 
       <UpdateBanner />
 

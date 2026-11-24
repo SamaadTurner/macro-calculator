@@ -13,6 +13,14 @@ export interface LogEntry {
   incomplete?: true
 }
 
+/** Calories and macros of one food, as the food search works them out. */
+export interface FoodAmounts {
+  calories: number
+  protein: number | null
+  carbs: number | null
+  fats: number | null
+}
+
 export const LOG_LIMITS = {
   calories: { min: 0, max: 10_000 },
   grams: { min: 0, max: 1_000 },
@@ -78,6 +86,24 @@ export function saveLog(entries: LogEntry[]): boolean {
 /** Adds an entry, replacing any entry already on that date. */
 export function upsertEntry(entries: LogEntry[], entry: LogEntry): LogEntry[] {
   return sortAndDedupe([...entries, entry])
+}
+
+/**
+ * Adds a food to a saved day (or starts the day), for the scan button outside the Log tab.
+ * Returns null when the day would go over the log's limits, so a typo in the amount is not
+ * saved. A saved day keeps whole numbers, so each food is rounded as it is added.
+ */
+export function addFoodToDay(entries: LogEntry[], date: string, food: FoodAmounts): LogEntry[] | null {
+  const day: LogEntry = { ...(entries.find(entry => entry.date === date) ?? { date }) }
+  day.calories = Math.round((day.calories ?? 0) + food.calories)
+  if (!inRange(day.calories, LOG_LIMITS.calories)) return null
+  for (const macro of ['protein', 'carbs', 'fats'] as const) {
+    const grams = food[macro]
+    if (grams === null) continue
+    day[macro] = Math.round((day[macro] ?? 0) + grams)
+    if (!inRange(day[macro] as number, LOG_LIMITS.grams)) return null
+  }
+  return upsertEntry(entries, day)
 }
 
 export function removeEntry(entries: LogEntry[], date: string): LogEntry[] {

@@ -2,8 +2,10 @@ import type { UnitSystem } from '../engine/types'
 import { kgToLb, lbToKg, parseNumber, roundTo } from '../engine/units'
 import { checkWeight } from '../engine/validate'
 import { isIsoDate, todayIso } from './dates'
-import type { LogEntry } from './entries'
+import type { FoodAmounts, LogEntry } from './entries'
 import { LOG_LIMITS } from './entries'
+
+export type { FoodAmounts } from './entries'
 
 /** What the user has typed in the log form, kept as text like the calculator form. */
 export interface LogDraft {
@@ -68,14 +70,6 @@ export function draftToEntry(draft: LogDraft, unit: UnitSystem): LogEntry {
     if (grams !== null) entry[macro] = Math.round(grams)
   }
   return entry
-}
-
-/** Calories and macros of one food, as the food search works them out. */
-export interface FoodAmounts {
-  calories: number
-  protein: number | null
-  carbs: number | null
-  fats: number | null
 }
 
 /**

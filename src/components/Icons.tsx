@@ -64,3 +64,11 @@ export const TrashIcon = ({ size = 18 }: IconProps) => (
     <path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13" />
   </svg>
 )
+
+export const BarcodeIcon = ({ size = 24 }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+    <path d="M7 8v8M10 8v8M13 8v8M16 8v8" />
+  </svg>
+)
+

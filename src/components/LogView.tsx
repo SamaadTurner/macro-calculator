@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import type { UnitSystem } from '../engine/types'
 import { kgToLb, lbToKg, roundTo } from '../engine/units'
@@ -31,6 +31,9 @@ interface LogViewProps {
   unit: UnitSystem
   onUnitChange: (unit: UnitSystem) => void
   showToast: (message: string) => void
+  /** A food from the scan button, to add to the form. */
+  incomingFood?: { id: number; name: string; amounts: FoodAmounts } | null
+  onIncomingFoodUsed?: () => void
 }
 
 /** The form for one date: that day's saved numbers if it has any, otherwise empty boxes. */
@@ -54,7 +57,7 @@ function formatChange(kg: number, unit: UnitSystem): string {
   return `${value > 0 ? '+' : '−'}${Math.abs(value)} ${unit === 'imperial' ? 'lb' : 'kg'}`
 }
 
-export function LogView({ unit, onUnitChange, showToast }: LogViewProps) {
+export function LogView({ unit, onUnitChange, showToast, incomingFood, onIncomingFoodUsed }: LogViewProps) {
   const [entries, setEntries] = useState<LogEntry[]>(() => loadLog())
   const [draft, setDraft] = useState<LogDraft>(() => draftForDate(loadLog(), todayIso(), unit))
   const [errors, setErrors] = useState<DraftErrors>({})
@@ -86,6 +89,14 @@ export function LogView({ unit, onUnitChange, showToast }: LogViewProps) {
     setErrors(current => ({ ...current, calories: undefined, form: undefined }))
     showToast(`Added ${name} (${amounts.calories.toLocaleString('en-US')} cal). Press ${alreadyLogged ? 'Update day' : 'Save day'} to keep it.`)
   }
+
+  useEffect(() => {
+    if (!incomingFood) return
+    handleAddFood(incomingFood.name, incomingFood.amounts)
+    onIncomingFoodUsed?.()
+    // Runs once per scanned food (its id); handleAddFood is the current render's
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomingFood?.id])
 
   function update(field: keyof LogDraft) {
     return (value: string) => {
