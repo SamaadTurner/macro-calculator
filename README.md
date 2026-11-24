@@ -321,9 +321,8 @@ npm run dev            # http://localhost:5173/macro-calculator/
 - `npm audit` reported no advisories on 2026-11-23, after moving the build and test tools to
   Vite 8, Vitest 5 and typescript-eslint 8. `package.json` pins workbox-build's copy of glob to
   14 (the version it asks for has a moderate advisory); the service worker it builds lists the
-  same files. Lint runs on ESLint 10 with a flat config (`eslint.config.js`). Playwright is
-  still on 1.58, so the browser tests run on Ubuntu 24.04 in CI (1.58 cannot install its
-  browser on 26.04); upgrading it is still to do.
+  same files. Lint runs on ESLint 10 with a flat config (`eslint.config.js`). Browser tests run on
+  Playwright 1.65.
 
 ## Planned
 
