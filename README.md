@@ -318,10 +318,11 @@ npm run dev            # http://localhost:5173/macro-calculator/
   Cronometer and MyFitnessPal exports, not on real exports, whose exact headers could not be
   confirmed. A file whose columns are not guessed can still be imported by picking them in the
   dropdowns. Imports must be one file at a time (food and weight files one after the other).
-- `npm audit` reports advisories in development-only packages: critical and high ones in Vitest,
-  Tinypool and the Vite dev server (fixed in newer major versions, an upgrade still to do), and
-  moderate ones in the build tools (typescript-eslint, and glob in the service worker builder).
-  None of that code is in the built site.
+- `npm audit` reported no advisories on 2026-11-23, after moving the build and test tools to
+  Vite 8, Vitest 5 and typescript-eslint 8. `package.json` pins workbox-build's copy of glob to
+  14 (the version it asks for has a moderate advisory); the service worker it builds lists the
+  same files. ESLint is still on 8, which no longer gets updates; moving to ESLint 9 or 10 means
+  a new config format and is not done yet.
 
 ## Planned
 
