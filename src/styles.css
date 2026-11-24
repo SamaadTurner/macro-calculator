@@ -1762,14 +1762,18 @@ a.btn {
   right: max(16px, env(safe-area-inset-right));
   bottom: max(20px, env(safe-area-inset-bottom));
   z-index: 40;
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 20px 0 16px;
   border: 0;
-  border-radius: 50%;
+  border-radius: 999px;
   background: var(--primary);
   color: var(--on-primary);
+  font: inherit;
+  font-weight: 700;
+  font-size: 1rem;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
   cursor: pointer;
 }
@@ -1804,5 +1808,129 @@ a.btn {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+/* The camera view with a box to aim the barcode at, like scanner apps */
+.scan-view {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  max-height: 52vh;
+  border-radius: var(--radius-sm);
+  background: #000;
+}
+
+.scan-view .food-video {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+}
+
+.scan-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 78%;
+  height: 40%;
+  transform: translate(-50%, -50%);
+  border-radius: 10px;
+  /* Darkens everything outside the box */
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45);
+}
+
+.scan-corner {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: 4px solid #fff;
+}
+
+.scan-corner-tl {
+  top: 0;
+  left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-top-left-radius: 10px;
+}
+
+.scan-corner-tr {
+  top: 0;
+  right: 0;
+  border-left: 0;
+  border-bottom: 0;
+  border-top-right-radius: 10px;
+}
+
+.scan-corner-bl {
+  bottom: 0;
+  left: 0;
+  border-right: 0;
+  border-top: 0;
+  border-bottom-left-radius: 10px;
+}
+
+.scan-corner-br {
+  right: 0;
+  bottom: 0;
+  border-left: 0;
+  border-top: 0;
+  border-bottom-right-radius: 10px;
+}
+
+/* A line moving up and down shows the scanner is live */
+.scan-line {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 50%;
+  height: 2px;
+  background: #e8584c;
+  box-shadow: 0 0 8px #e8584c;
+  animation: scan-sweep 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes scan-sweep {
+  from {
+    top: 12%;
+  }
+  to {
+    top: 88%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-line {
+    animation: none;
+  }
+}
+
+.scan-hint {
+  color: var(--text-2);
+  font-weight: 600;
+  text-align: center;
+}
+
+.food-total {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.food-calories {
+  font-size: 1rem;
+  color: var(--text-2);
+}
+
+.food-calories strong {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--text);
+}
+
+.food-macros {
+  color: var(--text-2);
+  font-weight: 600;
 }
 

@@ -216,8 +216,9 @@ export default function App() {
         </p>
       </footer>
 
-      <button type="button" className="scan-button" onClick={() => setScanOpen(true)} aria-label="Scan a barcode" title="Scan a barcode">
-        <BarcodeIcon size={26} />
+      <button type="button" className="scan-button" onClick={() => setScanOpen(true)}>
+        <BarcodeIcon size={22} />
+        <span>Scan food</span>
       </button>
       <ScanSheet open={scanOpen} addLabel={tab === 'log' ? 'Add to the form' : 'Add to today'} onAdd={handleScannedFood} onClose={() => setScanOpen(false)} />
 

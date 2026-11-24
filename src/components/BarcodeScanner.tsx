@@ -10,11 +10,21 @@ interface BarcodeScannerProps {
   onClose: (message?: string) => void
 }
 
-/** Shows the back camera and reads food barcodes from it. */
+// The flashlight and focus settings are not in the TypeScript DOM types yet
+type CameraCapabilities = MediaTrackCapabilities & { torch?: boolean; focusMode?: string[] }
+
+/**
+ * Shows the back camera with a box to line the barcode up in, the way scanner apps do, and
+ * reads food barcodes from it. The whole picture is read, so a barcode a little outside the
+ * box still counts; the box is there to show where to aim and how close to hold the phone.
+ */
 export function BarcodeScanner({ idPrefix, onFound, onClose }: BarcodeScannerProps) {
   const video = useRef<HTMLVideoElement>(null)
+  const track = useRef<MediaStreamTrack | null>(null)
   const [hint, setHint] = useState('Starting the camera…')
   const [error, setError] = useState('')
+  const [hasTorch, setHasTorch] = useState(false)
+  const [torchOn, setTorchOn] = useState(false)
 
   useEffect(() => {
     let stream: MediaStream | null = null
@@ -23,18 +33,30 @@ export function BarcodeScanner({ idPrefix, onFound, onClose }: BarcodeScannerPro
 
     async function start() {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+        // A sharper picture reads thin barcode lines better
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        })
       } catch {
         if (!stopped) onClose('The camera could not be opened. Allow camera access for this site, or type the digits under the bars.')
         return
       }
       if (stopped || !video.current) {
-        stream.getTracks().forEach(track => track.stop())
+        stream.getTracks().forEach(each => each.stop())
         return
       }
       video.current.srcObject = stream
       // Not awaited: some browsers only settle play() once the first frame arrives
       video.current.play().catch(() => undefined)
+
+      const camera = stream.getVideoTracks()[0] ?? null
+      track.current = camera
+      const capabilities = (camera?.getCapabilities?.() ?? {}) as CameraCapabilities
+      if (capabilities.torch) setHasTorch(true)
+      if (capabilities.focusMode?.includes('continuous')) {
+        camera?.applyConstraints({ advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet] }).catch(() => undefined)
+      }
 
       let reader
       try {
@@ -45,7 +67,7 @@ export function BarcodeScanner({ idPrefix, onFound, onClose }: BarcodeScannerPro
         return
       }
       if (stopped) return
-      setHint('Point the back camera at the barcode and hold it still.')
+      setHint('Line up the barcode inside the box and hold still.')
 
       const look = async () => {
         if (stopped || !video.current) return
@@ -57,6 +79,8 @@ export function BarcodeScanner({ idPrefix, onFound, onClose }: BarcodeScannerPro
         try {
           const found = await reader.detect(video.current)
           if (found.length > 0 && !stopped) {
+            // A short buzz, like the scanner apps, where the phone supports it
+            navigator.vibrate?.(80)
             onFound(found[0].rawValue)
             return
           }
@@ -64,7 +88,7 @@ export function BarcodeScanner({ idPrefix, onFound, onClose }: BarcodeScannerPro
         } catch {
           setError('Could not read the picture. Hold the barcode flat and well lit.')
         }
-        timer = window.setTimeout(look, 250)
+        timer = window.setTimeout(look, 200)
       }
       look()
     }
@@ -73,22 +97,46 @@ export function BarcodeScanner({ idPrefix, onFound, onClose }: BarcodeScannerPro
     return () => {
       stopped = true
       window.clearTimeout(timer)
-      stream?.getTracks().forEach(track => track.stop())
+      stream?.getTracks().forEach(each => each.stop())
     }
     // Runs once per opening; the callbacks come from the parent's current render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  function toggleTorch() {
+    const next = !torchOn
+    track.current
+      ?.applyConstraints({ advanced: [{ torch: next } as MediaTrackConstraintSet] })
+      .then(() => setTorchOn(next))
+      .catch(() => setHasTorch(false))
+  }
+
   return (
     <div className="food-scanner stack" data-testid={`${idPrefix}-scanner`}>
-      <video ref={video} className="food-video" muted playsInline aria-label="Camera view for the barcode" />
-      <p className="field-hint" role="status">
+      <div className="scan-view">
+        <video ref={video} className="food-video" muted playsInline aria-label="Camera view for the barcode" />
+        <div className="scan-frame" aria-hidden="true">
+          <span className="scan-corner scan-corner-tl" />
+          <span className="scan-corner scan-corner-tr" />
+          <span className="scan-corner scan-corner-bl" />
+          <span className="scan-corner scan-corner-br" />
+          <span className="scan-line" />
+        </div>
+      </div>
+      <p className="scan-hint" role="status">
         {hint}
       </p>
       <FieldError id={`${idPrefix}-scan-error`} message={error} />
-      <button type="button" className="btn btn-secondary btn-small" onClick={() => onClose()}>
-        Stop scanning
-      </button>
+      <div className="actions">
+        {hasTorch ? (
+          <button type="button" className="btn btn-secondary btn-small" onClick={toggleTorch} aria-pressed={torchOn}>
+            {torchOn ? 'Flashlight off' : 'Flashlight'}
+          </button>
+        ) : null}
+        <button type="button" className="btn btn-secondary btn-small" onClick={() => onClose()}>
+          Stop scanning
+        </button>
+      </div>
     </div>
   )
 }

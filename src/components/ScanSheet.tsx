@@ -72,7 +72,7 @@ function ScanSheetBody({ addLabel, onAdd, onClose }: Omit<ScanSheetProps, 'open'
     <div className="stack">
       <div className="scan-head">
         <h2 id="scan-title" className="card-title">
-          Scan a barcode
+          Scan food
         </h2>
         <button type="button" className="btn btn-secondary btn-small" onClick={onClose}>
           Close

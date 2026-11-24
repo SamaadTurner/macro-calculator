@@ -165,7 +165,7 @@ export function FoodLookup({ onAdd }: FoodLookupProps) {
           </div>
           {canUseCamera() ? (
             <button type="button" className="btn btn-secondary btn-small food-scan" onClick={() => setScanning(true)} disabled={scanning}>
-              Scan with camera
+              Scan barcode
             </button>
           ) : null}
         </div>
