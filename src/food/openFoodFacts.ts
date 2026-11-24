@@ -21,15 +21,31 @@ export interface FoodNutrients {
   fats: number | null
 }
 
+/** Foods are measured in grams; drinks often in millilitres. */
+export type BaseUnit = 'g' | 'ml'
+
+export interface FoodServing {
+  /** As printed, like "1 bar (68 g)" or "12 fl oz (360 ml)". */
+  label: string
+  /** The serving in grams or millilitres, when the package gives it. */
+  quantity: number | null
+  /** One serving. The label's own numbers when Open Food Facts has them, so they match the package. */
+  nutrients: FoodNutrients
+}
+
 export interface FoodItem {
   code: string
   name: string
   brand: string
-  /** Per 100 g (or 100 ml for drinks; the label says which). */
-  per100g: FoodNutrients
-  /** One serving as the package states it, when it gives a weight. */
-  serving: { grams: number; label: string } | null
+  unit: BaseUnit
+  /** Per 100 g or 100 ml, when known. */
+  per100: FoodNutrients | null
+  /** One serving as the package states it, when it states one. */
+  serving: FoodServing | null
 }
+
+/** How much was eaten: a number of servings (the usual way, like the big logging apps) or g/ml. */
+export type FoodAmount = { kind: 'servings'; count: number } | { kind: 'quantity'; value: number }
 
 /** One search result: enough to show in the list. Picking it loads the full FoodItem. */
 export interface FoodHit {
@@ -42,7 +58,7 @@ export type FoodResult<T> = { ok: true; value: T } | { ok: false; message: strin
 
 const BASE = 'https://world.openfoodfacts.org'
 const SEARCH = 'https://search.openfoodfacts.org/search'
-const FIELDS = 'code,product_name,brands,nutriments,serving_size,serving_quantity'
+const FIELDS = 'code,product_name,brands,nutriments,serving_size,serving_quantity,serving_quantity_unit,nutrition_data_per'
 export const SEARCH_PAGE_SIZE = 20
 
 /** Remembers when requests were sent and refuses more than `max` in any minute. */
@@ -89,46 +105,68 @@ export function readHit(raw: unknown): FoodHit | null {
   return { code, name, brand: firstBrand(hit.brands) }
 }
 
+/** Calories (from kcal, or kJ when only that is given) and macros for one suffix: "_100g" or "_serving". */
+function readNutrients(nutriments: Record<string, unknown>, suffix: string): FoodNutrients | null {
+  const kcal = toNumber(nutriments[`energy-kcal${suffix}`])
+  const kj = toNumber(nutriments[`energy-kj${suffix}`] ?? nutriments[`energy${suffix}`])
+  const calories = kcal ?? (kj === null ? null : kj / 4.184)
+  if (calories === null) return null
+  return {
+    calories,
+    protein: toNumber(nutriments[`proteins${suffix}`]),
+    carbs: toNumber(nutriments[`carbohydrates${suffix}`]),
+    fats: toNumber(nutriments[`fat${suffix}`]),
+  }
+}
+
+function scale(nutrients: FoodNutrients, factor: number): FoodNutrients {
+  const macro = (value: number | null) => (value === null ? null : value * factor)
+  return { calories: nutrients.calories * factor, protein: macro(nutrients.protein), carbs: macro(nutrients.carbs), fats: macro(nutrients.fats) }
+}
+
 /**
  * Reads one product from the API, or null when it has no name or no calories (it cannot be
- * logged then). Calories come from kcal, or from kJ when only that is given.
+ * logged then). US labels give numbers per serving and Open Food Facts keeps those as
+ * "_serving" values next to its per-100 g ones; both are kept so the app can show the numbers
+ * printed on the package.
  */
 export function readProduct(raw: unknown): FoodItem | null {
   if (!raw || typeof raw !== 'object') return null
   const product = raw as Record<string, unknown>
   const name = typeof product.product_name === 'string' ? product.product_name.trim() : ''
+  if (!name) return null
   const nutriments = (product.nutriments && typeof product.nutriments === 'object' ? product.nutriments : {}) as Record<string, unknown>
-  const kcal = toNumber(nutriments['energy-kcal_100g'])
-  const kj = toNumber(nutriments['energy-kj_100g'] ?? nutriments['energy_100g'])
-  const calories = kcal ?? (kj === null ? null : kj / 4.184)
-  if (!name || calories === null || calories > 900) return null
+  const unit: BaseUnit = product.serving_quantity_unit === 'ml' || product.nutrition_data_per === '100ml' ? 'ml' : 'g'
 
-  const grams = toNumber(product.serving_quantity)
-  const servingLabel = typeof product.serving_size === 'string' ? product.serving_size.trim() : ''
-  return {
-    code: typeof product.code === 'string' ? product.code : '',
-    name,
-    brand: firstBrand(product.brands),
-    per100g: {
-      calories: roundTo1(calories),
-      protein: toNumber(nutriments.proteins_100g),
-      carbs: toNumber(nutriments.carbohydrates_100g),
-      fats: toNumber(nutriments.fat_100g),
-    },
-    serving: grams !== null && grams > 0 && grams <= 2000 ? { grams, label: servingLabel || `${grams} g` } : null,
-  }
+  let per100 = readNutrients(nutriments, '_100g')
+  // More than 900 calories in 100 g is not food (pure fat is about 900): a typo in the data
+  if (per100 && per100.calories > 900) per100 = null
+
+  const quantityValue = toNumber(product.serving_quantity)
+  const quantity = quantityValue !== null && quantityValue > 0 && quantityValue <= 5000 ? quantityValue : null
+  const label = typeof product.serving_size === 'string' && product.serving_size.trim() ? product.serving_size.trim() : quantity ? `${quantity} ${unit}` : ''
+  let servingNutrients = readNutrients(nutriments, '_serving')
+  if (servingNutrients && servingNutrients.calories > 5000) servingNutrients = null
+  if (!servingNutrients && per100 && quantity) servingNutrients = scale(per100, quantity / 100)
+  // Only a per-serving entry: work out per 100 from the serving weight, so grams still work
+  if (!per100 && servingNutrients && quantity) per100 = scale(servingNutrients, 100 / quantity)
+
+  const serving = servingNutrients && label ? { label, quantity, nutrients: servingNutrients } : null
+  if (!per100 && !serving) return null
+  return { code: typeof product.code === 'string' ? product.code : '', name, brand: firstBrand(product.brands), unit, per100, serving }
 }
 
-/** What `grams` of the food adds: calories rounded to whole, macros to 0.1 g. */
-export function nutrientsFor(food: FoodItem, grams: number): FoodNutrients {
-  const share = grams / 100
-  const macro = (value: number | null) => (value === null ? null : roundTo1(value * share))
-  return {
-    calories: Math.round(food.per100g.calories * share),
-    protein: macro(food.per100g.protein),
-    carbs: macro(food.per100g.carbs),
-    fats: macro(food.per100g.fats),
-  }
+/** The amount a food starts at: one serving when the package gives one, otherwise 100 g or ml. */
+export function defaultAmount(food: FoodItem): FoodAmount {
+  return food.serving ? { kind: 'servings', count: 1 } : { kind: 'quantity', value: 100 }
+}
+
+/** What an amount of the food adds: calories rounded to whole, macros to 0.1 g. Null if it cannot be worked out. */
+export function nutrientsFor(food: FoodItem, amount: FoodAmount): FoodNutrients | null {
+  const base = amount.kind === 'servings' ? food.serving && scale(food.serving.nutrients, amount.count) : food.per100 && scale(food.per100, amount.value / 100)
+  if (!base) return null
+  const macro = (value: number | null) => (value === null ? null : roundTo1(value))
+  return { calories: Math.round(base.calories), protein: macro(base.protein), carbs: macro(base.carbs), fats: macro(base.fats) }
 }
 
 /**
