@@ -18,11 +18,22 @@ const yogurt = {
   nutriments: { 'energy-kcal_100g': 59, proteins_100g: 10, carbohydrates_100g: 3.6, fat_100g: 0.4 },
 }
 const oats = {
-  code: '0000000000000',
+  code: '20048402',
   product_name: 'Rolled Oats',
   brands: '',
   nutriments: { 'energy-kj_100g': 1569, proteins_100g: 13, carbohydrates_100g: 60, fat_100g: 7 },
 }
+
+// No calories listed, so it can be found but not added
+const gum = { code: '4009900000000', product_name: 'Chewing Gum', brands: 'Minty', nutriments: {} }
+const productsByCode: Record<string, object> = { [yogurt.code]: yogurt, [oats.code]: oats, [gum.code]: gum }
+// The search service answers with names only, brands tagged with a language
+const hits = [
+  { code: yogurt.code, product_name: yogurt.product_name, brands: ['xx:Chobani'] },
+  { code: oats.code, product_name: oats.product_name },
+  { code: gum.code, product_name: gum.product_name, brands: ['xx:Minty'] },
+  { code: '2000000085748', product_name: '' },
+]
 
 interface FakeOff {
   searches: string[]
@@ -32,19 +43,21 @@ interface FakeOff {
 /** Answers Open Food Facts requests and records what was asked. */
 async function fakeOpenFoodFacts(page: Page, options: { searchStatus?: number; product?: object | null } = {}): Promise<FakeOff> {
   const seen: FakeOff = { searches: [], products: [] }
+  const cors = { 'access-control-allow-origin': '*' }
+  await page.route('https://search.openfoodfacts.org/**', async (route: Route) => {
+    const url = new URL(route.request().url())
+    seen.searches.push(url.searchParams.get('q') ?? '')
+    if (options.searchStatus) return route.fulfill({ status: options.searchStatus, headers: cors, body: '' })
+    return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ count: 4, hits }) })
+  })
   await page.route('https://world.openfoodfacts.org/**', async (route: Route) => {
     const url = new URL(route.request().url())
-    const cors = { 'access-control-allow-origin': '*' }
-    if (url.pathname === '/cgi/search.pl') {
-      seen.searches.push(url.searchParams.get('search_terms') ?? '')
-      if (options.searchStatus) return route.fulfill({ status: options.searchStatus, headers: cors, body: '' })
-      return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ count: 2, products: [yogurt, oats, { product_name: 'No calories' }] }) })
-    }
     const product = url.pathname.match(/^\/api\/v2\/product\/(\d+)$/)
     if (product) {
       seen.products.push(product[1])
-      if (options.product === null) return route.fulfill({ status: 404, headers: cors, contentType: 'application/json', body: JSON.stringify({ status: 0 }) })
-      return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ status: 1, product: options.product ?? yogurt }) })
+      const found = options.product === null ? undefined : (options.product ?? productsByCode[product[1]])
+      if (!found) return route.fulfill({ status: 404, headers: cors, contentType: 'application/json', body: JSON.stringify({ status: 0 }) })
+      return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ status: 1, product: found }) })
     }
     return route.fulfill({ status: 500, headers: cors, body: 'unexpected request' })
   })
@@ -66,9 +79,9 @@ test('searches a food, picks an amount and adds it to the day', async ({ page })
   await page.getByLabel('Food name').fill('greek yogurt')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   const list = page.getByRole('list', { name: 'Foods found' })
-  // The product without calories is left out; kJ-only oats are converted (1569 kJ = 375 cal)
-  await expect(list.getByRole('listitem')).toHaveCount(2)
-  await expect(list.getByRole('button', { name: /Rolled Oats\s*375 cal per 100 g/ })).toBeVisible()
+  // The result without a name is left out; the brand loses its language tag
+  await expect(list.getByRole('listitem')).toHaveCount(3)
+  await expect(list.getByRole('button', { name: /Greek Yogurt\s*Chobani/ })).toBeVisible()
   await list.getByRole('button', { name: /Greek Yogurt/ }).click()
 
   // The amount starts at one serving
@@ -90,6 +103,9 @@ test('searches a food, picks an amount and adds it to the day', async ({ page })
   await page.getByLabel('Food name').fill('oats')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await list.getByRole('button', { name: /Rolled Oats/ }).click()
+  // kJ-only oats are converted (1569 kJ = 375 cal); no serving weight, so the amount starts at 100 g
+  await expect(page.getByTestId('food-chosen')).toContainText('Per 100 g: 375 cal')
+  await expect(page.getByLabel('Amount eaten')).toHaveValue('100')
   await page.getByLabel('Amount eaten').fill('40')
   await page.getByRole('button', { name: 'Add to this day' }).click()
   await expect(page.getByLabel('Calories eaten')).toHaveValue('298')
@@ -97,8 +113,21 @@ test('searches a food, picks an amount and adds it to the day', async ({ page })
 
   await page.getByRole('button', { name: 'Save day' }).click()
   await expect(page.getByRole('row', { name: /Nov 24/ })).toContainText('298')
-  // Only the search words went to Open Food Facts
+  // Only the search words, and the codes of the picked foods, went to Open Food Facts
   expect(seen.searches).toEqual(['greek yogurt', 'oats'])
+  expect(seen.products).toEqual([yogurt.code, oats.code])
+})
+
+test('a food with no calories listed can be found but not added', async ({ page }) => {
+  await fakeOpenFoodFacts(page)
+  await openFoodPanel(page)
+  await page.getByLabel('Food name').fill('gum')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  await page.getByRole('list', { name: 'Foods found' }).getByRole('button', { name: /Chewing Gum/ }).click()
+  await expect(page.getByTestId('food-status')).toContainText('has no calories listed')
+  await expect(page.getByTestId('food-chosen')).toHaveCount(0)
+  // The list stays, so another result can be picked
+  await expect(page.getByRole('list', { name: 'Foods found' })).toBeVisible()
 })
 
 test('Enter in the search box searches instead of saving the day', async ({ page }) => {
@@ -132,7 +161,7 @@ test('a barcode that is not in the database says so', async ({ page }) => {
   await openFoodPanel(page)
   await page.getByLabel('Barcode').fill('9310653103609')
   await page.getByRole('button', { name: 'Look up' }).click()
-  await expect(page.getByTestId('food-status')).toContainText('No product with barcode 9310653103609 in Open Food Facts yet')
+  await expect(page.getByTestId('food-status')).toContainText('No product with code 9310653103609 in Open Food Facts yet')
 })
 
 test('a busy or unreachable service gets a plain message, and typing still works', async ({ page }) => {
@@ -143,7 +172,7 @@ test('a busy or unreachable service gets a plain message, and typing still works
   await expect(page.getByTestId('food-status')).toContainText('busy or not answering')
 
   await page.unrouteAll()
-  await page.route('https://world.openfoodfacts.org/**', route => route.abort('internetdisconnected'))
+  await page.route(/^https:\/\/(world|search)\.openfoodfacts\.org\//, route => route.abort('internetdisconnected'))
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(page.getByTestId('food-status')).toContainText('busy or not answering')
   await page.getByLabel('Calories eaten').fill('2100')

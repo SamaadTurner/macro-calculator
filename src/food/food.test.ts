@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanBarcode, lookupBarcode, MinuteLimit, nutrientsFor, readProduct, searchFoods } from './openFoodFacts'
+import { cleanBarcode, loadProduct, lookupBarcode, MinuteLimit, nutrientsFor, readHit, readProduct, searchFoods } from './openFoodFacts'
 
 // Shaped like the real API answers (checked 2026-11-24), trimmed to the fields the app asks for.
 const nutella = {
@@ -40,6 +40,24 @@ describe('readProduct', () => {
     expect(readProduct({ product_name: 'Typo', nutriments: { 'energy-kcal_100g': 5000 } })).toBeNull()
     expect(readProduct({ product_name: 'Bad', nutriments: { 'energy-kcal_100g': -5 } })).toBeNull()
     expect(readProduct(null)).toBeNull()
+  })
+})
+
+describe('readHit', () => {
+  it('reads a search result and drops the language tag from the brand', () => {
+    expect(readHit({ code: '9310653103609', product_name: 'Greek Yogurt', brands: ['xx:Chobani'] })).toEqual({
+      code: '9310653103609',
+      name: 'Greek Yogurt',
+      brand: 'Chobani',
+    })
+    expect(readHit({ code: '5310224562518', product_name: 'Kiev', brands: ['steggles'] })?.brand).toBe('steggles')
+    expect(readHit({ code: '20048402', product_name: 'Ham' })?.brand).toBe('')
+  })
+
+  it('skips results with no name or a code that is not digits', () => {
+    expect(readHit({ code: '2000000085748', product_name: '' })).toBeNull()
+    expect(readHit({ code: 'abc', product_name: 'Odd' })).toBeNull()
+    expect(readHit({ product_name: 'No code' })).toBeNull()
   })
 })
 
@@ -87,14 +105,13 @@ describe('requests', () => {
 
   const answer = (body: unknown, status = 200) => vi.fn(async () => new Response(JSON.stringify(body), { status }))
 
-  it('searches by name with a plain GET and drops products without calories', async () => {
-    const fetchMock = answer({ products: [nutella, { product_name: 'No calories' }] })
+  it('searches by name with a plain GET to the search service', async () => {
+    const fetchMock = answer({ hits: [{ code: '3017624010701', product_name: 'Nutella', brands: ['xx:Ferrero'] }, { code: '1', product_name: '' }] })
     vi.stubGlobal('fetch', fetchMock)
     const result = await searchFoods(' nutella ')
-    expect(result).toEqual({ ok: true, value: [readProduct(nutella)] })
+    expect(result).toEqual({ ok: true, value: [{ code: '3017624010701', name: 'Nutella', brand: 'Ferrero' }] })
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
-    expect(url).toContain('/cgi/search.pl?search_terms=nutella&')
-    expect(url).toContain('json=1')
+    expect(url).toMatch(/^https:\/\/search\.openfoodfacts\.org\/search\?q=nutella&/)
     // No extra headers: one would make the browser send a CORS preflight the server refuses
     expect(init.headers).toBeUndefined()
   })
@@ -113,11 +130,18 @@ describe('requests', () => {
     vi.stubGlobal('fetch', answer({ status: 0 }, 404))
     const missing = await lookupBarcode('3017624010701')
     expect(missing.ok).toBe(false)
-    expect(!missing.ok && missing.message).toContain('No product with barcode 3017624010701')
+    expect(!missing.ok && missing.message).toContain('No product with code 3017624010701')
 
     vi.stubGlobal('fetch', answer({ status: 1, product: { product_name: 'Gum', nutriments: {} } }))
     const empty = await lookupBarcode('3017624010701')
     expect(!empty.ok && empty.message).toContain('has no calories listed')
+  })
+
+  it('loads a product picked from search results, even with a shop code', async () => {
+    const fetchMock = answer({ status: 1, product: nutella })
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await loadProduct('20048402')).toEqual({ ok: true, value: { ...readProduct(nutella)!, code: '20048402' } })
+    expect((fetchMock.mock.calls[0] as unknown as [string])[0]).toContain('/api/v2/product/20048402?fields=')
   })
 
   it('checks the barcode before spending a lookup', async () => {

@@ -7,6 +7,12 @@
 // an extra header (X-User-Agent) makes the browser send a CORS preflight first, which their
 // server refused for Chrome in a test on 2026-11-24. So requests are plain GETs: the
 // browser's own User-Agent and the site's address are what they see.
+//
+// Searching uses their search service (search.openfoodfacts.org, "Search-a-licious"). The
+// older /cgi/search.pl answered 503 without CORS headers several times in a row on
+// 2026-11-24, which a browser reports as a blocked request. The search service is fast but
+// leaves out the nutrition numbers, so picking a result loads that one product, like a
+// barcode lookup does.
 
 export interface FoodNutrients {
   calories: number
@@ -25,9 +31,17 @@ export interface FoodItem {
   serving: { grams: number; label: string } | null
 }
 
+/** One search result: enough to show in the list. Picking it loads the full FoodItem. */
+export interface FoodHit {
+  code: string
+  name: string
+  brand: string
+}
+
 export type FoodResult<T> = { ok: true; value: T } | { ok: false; message: string }
 
 const BASE = 'https://world.openfoodfacts.org'
+const SEARCH = 'https://search.openfoodfacts.org/search'
 const FIELDS = 'code,product_name,brands,nutriments,serving_size,serving_quantity'
 export const SEARCH_PAGE_SIZE = 20
 
@@ -57,6 +71,25 @@ const toNumber = (value: unknown): number | null => {
 const roundTo1 = (value: number) => Math.round(value * 10) / 10
 
 /**
+ * The first brand, from "Ferrero, Nutella" (product API) or ["xx:Chobani"] (search service,
+ * which puts a language tag in front).
+ */
+function firstBrand(brands: unknown): string {
+  const first = Array.isArray(brands) ? brands[0] : typeof brands === 'string' ? brands.split(',')[0] : ''
+  return typeof first === 'string' ? first.replace(/^[a-z]{2}:/, '').trim() : ''
+}
+
+/** Reads one search result, or null when it has no name or code. */
+export function readHit(raw: unknown): FoodHit | null {
+  if (!raw || typeof raw !== 'object') return null
+  const hit = raw as Record<string, unknown>
+  const name = typeof hit.product_name === 'string' ? hit.product_name.trim() : ''
+  const code = typeof hit.code === 'string' && /^\d{1,14}$/.test(hit.code) ? hit.code : ''
+  if (!name || !code) return null
+  return { code, name, brand: firstBrand(hit.brands) }
+}
+
+/**
  * Reads one product from the API, or null when it has no name or no calories (it cannot be
  * logged then). Calories come from kcal, or from kJ when only that is given.
  */
@@ -75,7 +108,7 @@ export function readProduct(raw: unknown): FoodItem | null {
   return {
     code: typeof product.code === 'string' ? product.code : '',
     name,
-    brand: typeof product.brands === 'string' ? product.brands.split(',')[0].trim() : '',
+    brand: firstBrand(product.brands),
     per100g: {
       calories: roundTo1(calories),
       protein: toNumber(nutriments.proteins_100g),
@@ -133,32 +166,40 @@ async function getJson(url: string, signal?: AbortSignal): Promise<FoodResult<un
 
 const waitMessage = (seconds: number) => `That is a lot of lookups in a minute. Try again in ${seconds} seconds (Open Food Facts asks apps to slow down).`
 
-/** Searches by name. Products without calories are left out. */
-export async function searchFoods(query: string, signal?: AbortSignal): Promise<FoodResult<FoodItem[]>> {
+/** Searches by name. Results without a name are left out. */
+export async function searchFoods(query: string, signal?: AbortSignal): Promise<FoodResult<FoodHit[]>> {
   const terms = query.trim()
   if (terms.length < 2) return { ok: false, message: 'Type at least 2 letters to search.' }
   const wait = searchLimit.take()
   if (wait > 0) return { ok: false, message: waitMessage(wait) }
-  const params = new URLSearchParams({ search_terms: terms, search_simple: '1', action: 'process', json: '1', page_size: String(SEARCH_PAGE_SIZE), fields: FIELDS })
-  const result = await getJson(`${BASE}/cgi/search.pl?${params}`, signal)
+  const params = new URLSearchParams({ q: terms, page_size: String(SEARCH_PAGE_SIZE), fields: 'code,product_name,brands' })
+  const result = await getJson(`${SEARCH}?${params}`, signal)
   if (!result.ok) return { ok: false, message: result.message === 'not-found' ? BUSY : result.message }
-  const products = (result.value as { products?: unknown[] }).products
-  const foods = Array.isArray(products) ? products.map(readProduct).filter((food): food is FoodItem => food !== null) : []
+  const hits = (result.value as { hits?: unknown[] }).hits
+  const foods = Array.isArray(hits) ? hits.map(readHit).filter((hit): hit is FoodHit => hit !== null) : []
   return { ok: true, value: foods }
 }
 
-/** Looks up one product by barcode. */
+/** Looks up one product by a typed or scanned barcode, checking the digits first. */
 export async function lookupBarcode(barcode: string, signal?: AbortSignal): Promise<FoodResult<FoodItem>> {
   const code = cleanBarcode(barcode)
   if (!code) return { ok: false, message: 'That does not look like a barcode. Check the digits under the bars (8, 12, 13 or 14 of them).' }
+  return loadProduct(code, signal)
+}
+
+/**
+ * Loads one product by its code. Codes from search results are used as they are: some are
+ * shop codes without a check digit.
+ */
+export async function loadProduct(code: string, signal?: AbortSignal): Promise<FoodResult<FoodItem>> {
   const wait = productLimit.take()
   if (wait > 0) return { ok: false, message: waitMessage(wait) }
   const result = await getJson(`${BASE}/api/v2/product/${code}?fields=${FIELDS}`, signal)
-  const notFound = `No product with barcode ${code} in Open Food Facts yet. Type the numbers from the label instead.`
+  const notFound = `No product with code ${code} in Open Food Facts yet. Type the numbers from the label instead.`
   if (!result.ok) return { ok: false, message: result.message === 'not-found' ? notFound : result.message }
   const body = result.value as { status?: number; product?: unknown }
   if (body.status === 0 || !body.product) return { ok: false, message: notFound }
   const food = readProduct({ ...(body.product as object), code })
-  if (!food) return { ok: false, message: `Barcode ${code} is in Open Food Facts but has no calories listed. Type the numbers from the label instead.` }
+  if (!food) return { ok: false, message: `This product is in Open Food Facts but has no calories listed. Type the numbers from the label instead.` }
   return { ok: true, value: food }
 }

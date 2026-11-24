@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import type { FoodItem } from '../food/openFoodFacts'
-import { lookupBarcode, nutrientsFor, searchFoods } from '../food/openFoodFacts'
+import type { FoodHit, FoodItem } from '../food/openFoodFacts'
+import { loadProduct, lookupBarcode, nutrientsFor, searchFoods } from '../food/openFoodFacts'
 import type { FoodAmounts } from '../log/draft'
 import { parseNumber } from '../engine/units'
 import { FieldError, NumberField } from './fields'
@@ -39,7 +39,7 @@ const grams = (value: number | null) => (value === null ? '?' : `${value} g`)
 export function FoodLookup({ onAdd }: FoodLookupProps) {
   const [query, setQuery] = useState('')
   const [barcode, setBarcode] = useState('')
-  const [results, setResults] = useState<FoodItem[] | null>(null)
+  const [results, setResults] = useState<FoodHit[] | null>(null)
   const [chosen, setChosen] = useState<FoodItem | null>(null)
   const [amount, setAmount] = useState('')
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
@@ -76,7 +76,7 @@ export function FoodLookup({ onAdd }: FoodLookupProps) {
         return
       }
       setResults(result.value)
-      setStatus(result.value.length === 0 ? { kind: 'message', text: `Nothing with calories found for "${query.trim()}". Try other words or the barcode.` } : { kind: 'idle' })
+      setStatus(result.value.length === 0 ? { kind: 'message', text: `Nothing found for "${query.trim()}". Try other words or the barcode.` } : { kind: 'idle' })
     } catch {
       // Cancelled by a newer request; that one shows its own status
     }
@@ -88,6 +88,22 @@ export function FoodLookup({ onAdd }: FoodLookupProps) {
     const signal = startRequest('Looking up the barcode…')
     try {
       const result = await lookupBarcode(code, signal)
+      if (!result.ok) {
+        setStatus({ kind: 'message', text: result.message })
+        return
+      }
+      setStatus({ kind: 'idle' })
+      choose(result.value)
+    } catch {
+      // Cancelled by a newer request
+    }
+  }
+
+  // Search results only have names, so picking one loads its numbers
+  async function handlePick(hit: FoodHit) {
+    const signal = startRequest(`Loading ${hit.name}…`)
+    try {
+      const result = await loadProduct(hit.code, signal)
       if (!result.ok) {
         setStatus({ kind: 'message', text: result.message })
         return
@@ -202,14 +218,11 @@ export function FoodLookup({ onAdd }: FoodLookupProps) {
 
         {results && results.length > 0 && !chosen ? (
           <ul className="food-results" aria-label="Foods found">
-            {results.map(food => (
-              <li key={`${food.code}-${food.name}`}>
-                <button type="button" className="food-result" onClick={() => choose(food)}>
-                  <span className="food-name">{food.name}</span>
-                  <span className="food-detail">
-                    {food.brand ? `${food.brand} · ` : ''}
-                    {cal(food.per100g.calories)} cal per 100 g
-                  </span>
+            {results.map(hit => (
+              <li key={hit.code}>
+                <button type="button" className="food-result" onClick={() => handlePick(hit)}>
+                  <span className="food-name">{hit.name}</span>
+                  {hit.brand ? <span className="food-detail">{hit.brand}</span> : null}
                 </button>
               </li>
             ))}
