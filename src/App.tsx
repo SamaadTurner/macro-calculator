@@ -10,11 +10,19 @@ import { Wizard } from './components/Wizard'
 import { planAsText, Results } from './components/Results'
 import { LogView } from './components/LogView'
 import { CheckInView } from './components/CheckInView'
+import { SupportLine } from './components/SupportLine'
 import { UpdateBanner } from './components/UpdateBanner'
 import { loadCheckIns } from './coach/checkins'
+import { isBreakActive, loadBreak } from './coach/phases'
+import { todayIso } from './log/dates'
 
 type View = { name: 'steps'; step: number } | { name: 'results' }
 type Tab = 'plan' | 'log' | 'checkin'
+
+function activeBreakEnd(): string | null {
+  const value = loadBreak()
+  return isBreakActive(value, todayIso()) ? value.end : null
+}
 
 // The tab lives in the address (#log, #checkin) so a reload or a home screen bookmark opens the same tab.
 const tabFromHash = (): Tab => (window.location.hash === '#log' ? 'log' : window.location.hash === '#checkin' ? 'checkin' : 'plan')
@@ -139,6 +147,7 @@ export default function App() {
             unit={form.unit}
             savedPlans={savedPlans}
             latestCheckIn={loadCheckIns().pop() ?? null}
+            breakEnd={activeBreakEnd()}
             canShare={typeof navigator.share === 'function'}
             onGoalChange={changeGoal}
             onPaceChange={pace => dispatch({ type: 'set', field: 'pace', value: pace })}
@@ -161,6 +170,7 @@ export default function App() {
       </main>
 
       <footer className="footer">
+        <SupportLine />
         <p>
           Made by{' '}
           <a href="https://instagram.com/maad.lifts" target="_blank" rel="noreferrer">

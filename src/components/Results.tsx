@@ -4,7 +4,7 @@ import { kgToLb, roundTo } from '../engine/units'
 import { splitAcrossMeals } from '../engine/calculate'
 import type { SavedPlan } from '../storage'
 import type { CheckIn } from '../coach/checkins'
-import { formatDay } from '../log/dates'
+import { addDays, formatDay } from '../log/dates'
 import { Choice } from './fields'
 import { MacroRing, MACROS } from './MacroRing'
 import { AlertIcon, TrashIcon } from './Icons'
@@ -21,6 +21,8 @@ interface ResultsProps {
   savedPlans: SavedPlan[]
   /** The newest saved weekly check-in, shown above the formula plan. */
   latestCheckIn: CheckIn | null
+  /** The first day after a maintenance break that is running now, or null. */
+  breakEnd: string | null
   canShare: boolean
   onGoalChange: (goal: Goal) => void
   onPaceChange: (pace: number) => void
@@ -70,6 +72,13 @@ export function Results(props: ResultsProps) {
           ) : null}
         </p>
       </div>
+
+      {props.breakEnd ? (
+        <p className="checkin-banner" data-testid="break-banner">
+          You are on a maintenance break through {formatDay(addDays(props.breakEnd, -1))}. The check-in has your maintenance targets until then.{' '}
+          <a href="#checkin">Open the check-in</a>
+        </p>
+      ) : null}
 
       {props.latestCheckIn ? (
         <p className="checkin-banner" data-testid="checkin-banner">

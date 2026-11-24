@@ -10,6 +10,9 @@ import { estimateExpenditure } from '../coach/expenditure'
 import type { ExpenditureResult } from '../coach/expenditure'
 import { CHECK_IN_EVERY_DAYS, loadCheckIns, previousCheckIn, saveCheckIn } from '../coach/checkins'
 import type { CheckIn } from '../coach/checkins'
+import { isBreakActive, loadBreak, saveBreak, startBreak, SUGGEST_BREAK_AFTER_WEEKS, weeksOfFatLoss } from '../coach/phases'
+import type { MaintenanceBreak } from '../coach/phases'
+import { BreakNow, BreakOffer, ReminderCard } from './HabitCards'
 import { weeklyChangeText } from './Results'
 import { AlertIcon } from './Icons'
 
@@ -75,6 +78,7 @@ function NotEnoughData({ result, formula }: { result: Extract<ExpenditureResult,
 
 export function CheckInView({ person, planCalories, unit, showToast }: CheckInViewProps) {
   const [checkIns, setCheckIns] = useState<CheckIn[]>(() => loadCheckIns())
+  const [breakValue, setBreakValue] = useState<MaintenanceBreak | null>(() => loadBreak())
   const today = todayIso()
 
   if (!person) {
@@ -93,8 +97,14 @@ export function CheckInView({ person, planCalories, unit, showToast }: CheckInVi
 
   const entries = loadLog()
   const points = weightTrend(entries)
-  // Use today's trend weight, not the weight typed into the plan weeks ago.
-  const current: Person = { ...person, weightKg: points[points.length - 1]?.trendKg ?? person.weightKg }
+  const onBreak = isBreakActive(breakValue, today)
+  // Use today's trend weight, not the weight typed into the plan weeks ago. During a break the
+  // targets are maintenance; the plan's own goal is left alone and comes back when it ends.
+  const current: Person = {
+    ...person,
+    weightKg: points[points.length - 1]?.trendKg ?? person.weightKg,
+    goal: onBreak ? 'maintain' : person.goal,
+  }
   const formula = calculateBmr(current.weightKg, current.heightCm, current.age, current.sex) * current.activity
   const caloriesPerKg = caloriesPerKgChange(current.weightKg, current.heightCm, current.age, current.sex)
   const previous = previousCheckIn(checkIns, today)
@@ -110,7 +120,7 @@ export function CheckInView({ person, planCalories, unit, showToast }: CheckInVi
       protein: plan.protein.grams,
       carbs: plan.carbs.grams,
       fats: plan.fats.grams,
-      goal: person!.goal,
+      goal: current.goal,
     })
     if (!next) {
       showToast('Could not save. Your browser is blocking storage.')
@@ -119,6 +129,17 @@ export function CheckInView({ person, planCalories, unit, showToast }: CheckInVi
     setCheckIns(next)
     showToast(`Check-in saved. Next one on ${formatDay(addDays(today, CHECK_IN_EVERY_DAYS))}.`)
   }
+
+  function changeBreak(value: MaintenanceBreak | null, message: string) {
+    if (!saveBreak(value)) {
+      showToast('Could not save. Your browser is blocking storage.')
+      return
+    }
+    setBreakValue(value)
+    showToast(message)
+  }
+
+  const weeks = person.goal === 'cutting' && !onBreak ? weeksOfFatLoss(checkIns, today, breakValue) : 0
 
   return (
     <section className="log" aria-labelledby="checkin-title">
@@ -133,6 +154,8 @@ export function CheckInView({ person, planCalories, unit, showToast }: CheckInVi
         </p>
       ) : null}
 
+      {onBreak ? <BreakNow value={breakValue} today={today} onEnd={() => changeBreak(null, 'Break ended. Your fat loss targets are back.')} /> : null}
+
       {result.status === 'not-enough' ? (
         <NotEnoughData result={result} formula={formula} />
       ) : (
@@ -143,9 +166,21 @@ export function CheckInView({ person, planCalories, unit, showToast }: CheckInVi
           comparedWith={last ? 'last check-in' : 'plan'}
           unit={unit}
           savedToday={Boolean(savedToday)}
+          onBreak={onBreak}
           onSave={handleSave}
         />
       )}
+
+      {person.goal === 'cutting' && !onBreak && result.status === 'ready' ? (
+        <BreakOffer
+          weeks={weeks}
+          suggested={weeks >= SUGGEST_BREAK_AFTER_WEEKS}
+          onStart={length => {
+            const value = startBreak(today, length)
+            changeBreak(value, `Break started. Fat loss targets come back on ${formatDay(value.end, today)}.`)
+          }}
+        />
+      ) : null}
 
       {checkIns.length > 0 ? (
         <div className="card">
@@ -182,9 +217,11 @@ export function CheckInView({ person, planCalories, unit, showToast }: CheckInVi
         </div>
       ) : null}
 
+      <ReminderCard firstDay={last ? addDays(last.date, CHECK_IN_EVERY_DAYS) : today} today={today} onDone={showToast} />
+
       <p className="disclaimer">
         An estimate from your own log, not medical advice. It is only as good as the log: weigh in the morning before eating, and log everything, including drinks
-        and cooking oil. If food or weight is causing you stress, take a break from tracking and talk to a doctor or dietitian.
+        and cooking oil.
       </p>
     </section>
   )
@@ -209,10 +246,11 @@ interface ReadyProps {
   comparedWith: 'plan' | 'last check-in'
   unit: UnitSystem
   savedToday: boolean
+  onBreak: boolean
   onSave: (expenditure: number, plan: ReturnType<typeof calculatePlan>) => void
 }
 
-function Ready({ result, current, planCalories, comparedWith, unit, savedToday, onSave }: ReadyProps) {
+function Ready({ result, current, planCalories, comparedWith, unit, savedToday, onBreak, onSave }: ReadyProps) {
   const plan = calculatePlan(current, { maintenance: result.expenditure, caloriesPerKg: result.caloriesPerKg })
   const dataPct = Math.round(result.dataWeight * 100)
   const difference = planCalories === null ? 0 : plan.calories - planCalories
@@ -290,8 +328,14 @@ function Ready({ result, current, planCalories, comparedWith, unit, savedToday, 
       <div className="card stack">
         <h2 className="card-title">Suggested targets</h2>
         <p className="card-text">
-          {GOAL_LABELS[current.goal]}
-          {current.goal !== 'maintain' ? `, ${roundTo(plan.breakdown.pace * 100, 2)}% of body weight a week` : ''}. Change the goal or pace on the Plan tab.
+          {onBreak ? (
+            'Maintain, for your break.'
+          ) : (
+            <>
+              {GOAL_LABELS[current.goal]}
+              {current.goal !== 'maintain' ? `, ${roundTo(plan.breakdown.pace * 100, 2)}% of body weight a week` : ''}. Change the goal or pace on the Plan tab.
+            </>
+          )}
         </p>
         <p className="big-number">
           <span data-testid="suggested-calories">{cal(plan.calories)}</span> <span className="big-unit">calories</span>
