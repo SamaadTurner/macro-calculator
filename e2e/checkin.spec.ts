@@ -1,50 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
-
-// Fixed clock, and a log put straight into storage, so the numbers can be checked exactly.
-// The expected values come from a separate Python version written from the formulas.
-const TODAY = new Date(2026, 10, 23, 9, 0)
-const LB_TO_KG = 0.45359237
-
-const averageManCut = {
-  unit: 'imperial',
-  sex: 'male',
-  age: '30',
-  weight: '180',
-  heightFt: '5',
-  heightIn: '10',
-  heightCm: '',
-  activity: 1.55,
-  goal: 'cutting',
-  pace: null,
-  exactWeightKg: null,
-  exactHeightCm: null,
-}
-
-const isoDaysAgo = (days: number) => {
-  const date = new Date(2026, 10, 23 - days)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-/** `days` days ending today: weight from 182 lb down 0.1 lb a day, 2,000 calories every day. */
-function steadyLog(days: number) {
-  return Array.from({ length: days }, (_, i) => ({ date: isoDaysAgo(days - 1 - i), weightKg: (182 - 0.1 * i) * LB_TO_KG, calories: 2000 }))
-}
-
-async function openCheckIn(page: Page, storage: { form?: object; log?: object[]; checkins?: object[] }) {
-  await page.clock.setFixedTime(TODAY)
-  await page.addInitScript(data => {
-    // Only on the first load, so a reload keeps what the test saved.
-    if (sessionStorage.getItem('seeded')) return
-    sessionStorage.setItem('seeded', '1')
-    if (data.form) localStorage.setItem('macroCalculator.form.v2', JSON.stringify(data.form))
-    if (data.log) localStorage.setItem('macroCalculator.log.v1', JSON.stringify(data.log))
-    if (data.checkins) localStorage.setItem('macroCalculator.checkins.v1', JSON.stringify(data.checkins))
-  }, storage)
-  await page.goto('./#checkin')
-  await expect(page.getByRole('heading', { name: 'What you really burn' })).toBeVisible()
-}
+import { averageManCut, isoDaysAgo, openCheckIn, steadyLog } from './helpers'
 
 async function expectNoViolations(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
