@@ -36,8 +36,8 @@ async function open(page: Page, hash: string) {
   await page.goto(`./${hash}`)
 }
 
-const scanButton = (page: Page) => page.getByRole('button', { name: 'Scan a barcode' })
-const sheet = (page: Page) => page.getByRole('dialog', { name: 'Scan a barcode' })
+const scanButton = (page: Page) => page.getByRole('button', { name: 'Scan food' })
+const sheet = (page: Page) => page.getByRole('dialog', { name: 'Scan food' })
 
 test('the scan button is on every tab', async ({ page }) => {
   await open(page, '#plan')
@@ -55,12 +55,12 @@ test('from the Plan tab a scanned food is saved into today', async ({ page }) =>
   await scanButton(page).click()
   await expect(sheet(page)).toBeVisible()
   await expect(sheet(page).getByTestId('scan-chosen')).toContainText('Greek Yogurt')
-  await expect(sheet(page).getByLabel('Amount eaten')).toHaveValue('170')
-  await sheet(page).getByLabel('Amount eaten').fill('200')
+  await expect(sheet(page).getByLabel('Number of servings')).toHaveValue('1')
+  await sheet(page).getByLabel('Number of servings').fill('2')
   await sheet(page).getByRole('button', { name: 'Add to today' }).click()
 
   await expect(sheet(page)).toBeHidden()
-  await expect(page.locator('.toast')).toHaveText('Added Greek Yogurt (118 cal) to today. Today: 118 cal.')
+  await expect(page.locator('.toast')).toHaveText('Added Greek Yogurt (201 cal) to today. Today: 201 cal.')
   expect(asked).toEqual([yogurt.code])
   // The camera was switched off
   expect(await page.evaluate(() => (window as unknown as { cameraStops: number }).cameraStops)).toBeGreaterThan(0)
@@ -68,9 +68,9 @@ test('from the Plan tab a scanned food is saved into today', async ({ page }) =>
   // It is in the log, and a second scan adds to it
   await scanButton(page).click()
   await sheet(page).getByRole('button', { name: 'Add to today' }).click()
-  await expect(page.locator('.toast')).toHaveText('Added Greek Yogurt (100 cal) to today. Today: 218 cal.')
+  await expect(page.locator('.toast')).toHaveText('Added Greek Yogurt (100 cal) to today. Today: 301 cal.')
   await page.getByRole('link', { name: 'Log', exact: true }).click()
-  await expect(page.getByRole('row', { name: /Nov 24/ })).toContainText('218')
+  await expect(page.getByRole('row', { name: /Nov 24/ })).toContainText('301')
 })
 
 test('from the Log tab a scanned food fills the form, and the day is saved as usual', async ({ page }) => {
@@ -85,6 +85,28 @@ test('from the Log tab a scanned food fills the form, and the day is saved as us
   await expect(page.getByLabel('Protein')).toHaveValue('17')
   await page.getByRole('button', { name: 'Save day' }).click()
   await expect(page.getByRole('row', { name: /Nov 24/ })).toContainText('1,100')
+})
+
+test('a camera with a flashlight gets a flashlight button that turns it on', async ({ page }) => {
+  await fakeProducts(page)
+  await fakeCamera(page, { barcode: yogurt.code, builtInReader: 'blind', torch: true })
+  await open(page, '#plan')
+  await scanButton(page).click()
+  const flashlight = sheet(page).getByRole('button', { name: 'Flashlight' })
+  await expect(flashlight).toHaveAttribute('aria-pressed', 'false')
+  await flashlight.click()
+  await expect(sheet(page).getByRole('button', { name: 'Flashlight off' })).toHaveAttribute('aria-pressed', 'true')
+  expect(await page.evaluate(() => (window as unknown as { torchSettings: boolean[] }).torchSettings)).toEqual([true])
+})
+
+test('a camera without a flashlight has no flashlight button; a read code buzzes', async ({ page }) => {
+  await fakeProducts(page)
+  await fakeCamera(page, { barcode: yogurt.code, builtInReader: 'fake-native' })
+  await open(page, '#plan')
+  await scanButton(page).click()
+  await expect(sheet(page).getByTestId('scan-chosen')).toBeVisible()
+  await expect(sheet(page).getByRole('button', { name: 'Flashlight' })).toHaveCount(0)
+  expect(await page.evaluate(() => (window as unknown as { buzzes: number }).buzzes)).toBe(1)
 })
 
 test('in a browser without a built-in reader the bundled one reads the barcode', async ({ page }) => {
@@ -137,7 +159,7 @@ test('closing the sheet while scanning stops the camera', async ({ page }) => {
   await fakeCamera(page, { barcode: yogurt.code, builtInReader: 'blind' })
   await open(page, '#plan')
   await scanButton(page).click()
-  await expect(sheet(page).getByText('Point the back camera at the barcode')).toBeVisible()
+  await expect(sheet(page).getByText('Line up the barcode inside the box')).toBeVisible()
   expect(await page.evaluate(() => (window as unknown as { cameraStops: number }).cameraStops)).toBe(0)
   await sheet(page).getByRole('button', { name: 'Close' }).click()
   await expect(sheet(page)).toBeHidden()

@@ -10,6 +10,8 @@ export interface FakeCameraOptions {
    * 'blind': a built-in reader that never finds anything, to test closing mid-scan.
    */
   builtInReader: 'fake-native' | 'none' | 'blind'
+  /** The camera has a flashlight; window.torchSettings records what the app asked for. */
+  torch?: boolean
 }
 
 /**
@@ -17,7 +19,7 @@ export interface FakeCameraOptions {
  * second like a video feed. window.cameraStops counts how often a camera track was stopped.
  */
 export async function fakeCamera(page: Page, options: FakeCameraOptions) {
-  await page.addInitScript(({ barcode, builtInReader }) => {
+  await page.addInitScript(({ barcode, builtInReader, torch }) => {
     const L = ['0001101', '0011001', '0010011', '0111101', '0100011', '0110001', '0101111', '0111011', '0110111', '0001011']
     const G = ['0100111', '0110011', '0011011', '0100001', '0011101', '0111001', '0000101', '0010001', '0001001', '0010111']
     const R = ['1110010', '1100110', '1101100', '1000010', '1011100', '1001110', '1010000', '1000100', '1001000', '1110100']
@@ -46,8 +48,11 @@ export async function fakeCamera(page: Page, options: FakeCameraOptions) {
     draw()
     setInterval(draw, 100)
 
-    const counts = window as unknown as { cameraStops: number }
+    const counts = window as unknown as { cameraStops: number; torchSettings: boolean[]; buzzes: number }
     counts.cameraStops = 0
+    counts.torchSettings = []
+    counts.buzzes = 0
+    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: () => { counts.buzzes++; return true } })
     Object.defineProperty(navigator, 'mediaDevices', {
       configurable: true,
       value: {
@@ -58,6 +63,13 @@ export async function fakeCamera(page: Page, options: FakeCameraOptions) {
             track.stop = () => {
               counts.cameraStops++
               stop()
+            }
+            if (torch) {
+              track.getCapabilities = () => ({ torch: true }) as MediaTrackCapabilities
+              track.applyConstraints = async constraints => {
+                const wanted = (constraints?.advanced?.[0] as { torch?: boolean } | undefined)?.torch
+                if (wanted !== undefined) counts.torchSettings.push(wanted)
+              }
             }
           }
           return stream

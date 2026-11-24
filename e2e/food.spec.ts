@@ -16,7 +16,17 @@ const yogurt = {
   brands: 'Chobani',
   serving_size: '170 g',
   serving_quantity: 170,
-  nutriments: { 'energy-kcal_100g': 59, proteins_100g: 10, carbohydrates_100g: 3.6, fat_100g: 0.4 },
+  nutriments: {
+    'energy-kcal_100g': 59,
+    proteins_100g: 10,
+    carbohydrates_100g: 3.6,
+    fat_100g: 0.4,
+    // The numbers printed on the label for one serving
+    'energy-kcal_serving': 100,
+    proteins_serving: 17,
+    carbohydrates_serving: 6,
+    fat_serving: 0.7,
+  },
 }
 const oats = {
   code: '20048402',
@@ -85,14 +95,23 @@ test('searches a food, picks an amount and adds it to the day', async ({ page })
   await expect(list.getByRole('button', { name: /Greek Yogurt\s*Chobani/ })).toBeVisible()
   await list.getByRole('button', { name: /Greek Yogurt/ }).click()
 
-  // The amount starts at one serving
-  const chosen = page.getByTestId('food-chosen')
-  await expect(chosen).toContainText('One serving: 170 g')
-  await expect(page.getByLabel('Amount eaten')).toBeFocused()
-  await expect(page.getByLabel('Amount eaten')).toHaveValue('170')
-  await expect(page.getByTestId('food-preview')).toHaveText('Adds 100 cal · P 17 g · C 6.1 g · F 0.7 g')
-  await page.getByLabel('Amount eaten').fill('250')
-  await expect(page.getByTestId('food-preview')).toHaveText('Adds 148 cal · P 25 g · C 9 g · F 1 g')
+  // Like the big logging apps: the label's serving, 1 of it, and the label's own numbers
+  const preview = page.getByTestId('food-preview')
+  await expect(page.getByLabel('Serving size')).toHaveValue('servings')
+  await expect(page.getByLabel('Serving size').locator('option:checked')).toHaveText('170 g')
+  await expect(page.getByLabel('Number of servings')).toBeFocused()
+  await expect(page.getByLabel('Number of servings')).toHaveValue('1')
+  await expect(preview).toContainText('100 cal')
+  await expect(preview).toContainText('Protein 17 g · Carbs 6 g · Fat 0.7 g')
+  await page.getByLabel('Number of servings').fill('2')
+  await expect(preview).toContainText('200 cal')
+  await expect(preview).toContainText('Protein 34 g · Carbs 12 g · Fat 1.4 g')
+  // Switching to grams keeps the amount: 2 servings of 170 g
+  await page.getByLabel('Serving size').selectOption('quantity')
+  await expect(page.getByLabel('Amount (g)')).toHaveValue('340')
+  await page.getByLabel('Amount (g)').fill('250')
+  await expect(preview).toContainText('148 cal')
+  await expect(preview).toContainText('Protein 25 g · Carbs 9 g · Fat 1 g')
   await page.getByRole('button', { name: 'Add to this day' }).click()
 
   await expect(page.locator('.toast')).toHaveText('Added Greek Yogurt (148 cal). Press Save day to keep it.')
@@ -104,10 +123,11 @@ test('searches a food, picks an amount and adds it to the day', async ({ page })
   await page.getByLabel('Food name').fill('oats')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await list.getByRole('button', { name: /Rolled Oats/ }).click()
-  // kJ-only oats are converted (1569 kJ = 375 cal); no serving weight, so the amount starts at 100 g
-  await expect(page.getByTestId('food-chosen')).toContainText('Per 100 g: 375 cal')
-  await expect(page.getByLabel('Amount eaten')).toHaveValue('100')
-  await page.getByLabel('Amount eaten').fill('40')
+  // kJ-only oats are converted (1569 kJ = 375 cal); no serving size, so they are weighed
+  await expect(page.getByTestId('food-chosen')).toContainText('No serving size on file')
+  await expect(page.getByLabel('Amount (g)')).toHaveValue('100')
+  await expect(preview).toContainText('375 cal')
+  await page.getByLabel('Amount (g)').fill('40')
   await page.getByRole('button', { name: 'Add to this day' }).click()
   await expect(page.getByLabel('Calories eaten')).toHaveValue('298')
   await expect(page.getByLabel('Protein')).toHaveValue('30.2')
@@ -185,7 +205,7 @@ test('scans a barcode with the camera in the Log panel', async ({ page }) => {
   const seen = await fakeOpenFoodFacts(page)
   await fakeCamera(page, { barcode: '9310653103609', builtInReader: 'fake-native' })
   await openFoodPanel(page)
-  await page.getByRole('button', { name: 'Scan with camera' }).click()
+  await page.getByRole('button', { name: 'Scan barcode' }).click()
   await expect(page.getByTestId('food-chosen')).toContainText('Greek Yogurt')
   await expect(page.getByTestId('food-scanner')).toHaveCount(0)
   await expect(page.getByLabel('Barcode', { exact: true })).toHaveValue('9310653103609')
@@ -198,7 +218,7 @@ test('without a camera there is no scan button, and typing the digits still work
   await fakeOpenFoodFacts(page)
   await noCamera(page)
   await openFoodPanel(page)
-  await expect(page.getByRole('button', { name: 'Scan with camera' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Scan barcode' })).toHaveCount(0)
   await page.getByLabel('Barcode', { exact: true }).fill('9310653103609')
   await page.getByRole('button', { name: 'Look up' }).click()
   await expect(page.getByTestId('food-chosen')).toContainText('Greek Yogurt')

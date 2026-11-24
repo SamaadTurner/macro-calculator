@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanBarcode, loadProduct, lookupBarcode, MinuteLimit, nutrientsFor, readHit, readProduct, searchFoods } from './openFoodFacts'
+import { cleanBarcode, defaultAmount, loadProduct, lookupBarcode, MinuteLimit, nutrientsFor, readHit, readProduct, searchFoods } from './openFoodFacts'
 
 // Shaped like the real API answers (checked 2026-11-24), trimmed to the fields the app asks for.
 const nutella = {
@@ -11,26 +11,75 @@ const nutella = {
   nutriments: { 'energy-kcal_100g': 539, proteins_100g: 6.3, carbohydrates_100g: 57.5, fat_100g: 30.9 },
 }
 
+// Real Open Food Facts entries (2026-11-24): the per-serving numbers are the label's.
+const clifBar = {
+  code: '722252100900',
+  product_name: 'CHOCOLATE CHIP ENERGY BAR',
+  brands: 'CLIF',
+  serving_size: '1 bar (68 g)',
+  serving_quantity: 68,
+  serving_quantity_unit: 'g',
+  nutrition_data_per: '100g',
+  nutriments: {
+    'energy-kcal_100g': 367.647058823529,
+    proteins_100g: 14.7058823529412,
+    carbohydrates_100g: 63.2352941176471,
+    fat_100g: 8.82352941176471,
+    'energy-kcal_serving': 250,
+    proteins_serving: 10,
+    carbohydrates_serving: 43,
+    fat_serving: 6,
+  },
+}
+const coke = {
+  code: '049000050103',
+  product_name: 'Coca Cola',
+  brands: 'Coca-Cola',
+  serving_size: '12 fl oz (360 ml)',
+  serving_quantity: 360,
+  serving_quantity_unit: 'ml',
+  nutrition_data_per: '100ml',
+  nutriments: { 'energy-kcal_100g': 38.8888888888889, proteins_100g: 0, carbohydrates_100g: 10.8333333333333, fat_100g: 0, 'energy-kcal_serving': 140, carbohydrates_serving: 39 },
+}
+
 describe('readProduct', () => {
-  it('reads the name, first brand, per-100 g numbers and serving', () => {
-    expect(readProduct(nutella)).toEqual({
-      code: '3017624010701',
-      name: 'Nutella',
-      brand: 'Ferrero',
-      per100g: { calories: 539, protein: 6.3, carbs: 57.5, fats: 30.9 },
-      serving: { grams: 15, label: '15 g' },
-    })
+  it('keeps the label serving with its own numbers, and the per-100 g ones', () => {
+    const food = readProduct(clifBar)!
+    expect(food.name).toBe('CHOCOLATE CHIP ENERGY BAR')
+    expect(food.brand).toBe('CLIF')
+    expect(food.unit).toBe('g')
+    expect(food.serving).toEqual({ label: '1 bar (68 g)', quantity: 68, nutrients: { calories: 250, protein: 10, carbs: 43, fats: 6 } })
+    expect(food.per100?.calories).toBeCloseTo(367.65, 2)
+  })
+
+  it('knows a drink is measured in millilitres', () => {
+    const food = readProduct(coke)!
+    expect(food.unit).toBe('ml')
+    expect(food.serving?.label).toBe('12 fl oz (360 ml)')
+    expect(food.serving?.nutrients.calories).toBe(140)
+  })
+
+  it('works out the serving from per-100 g numbers when the label numbers are missing', () => {
+    const food = readProduct(nutella)!
+    expect(food.serving?.quantity).toBe(15)
+    expect(food.serving?.nutrients.calories).toBeCloseTo(80.85, 2)
+    expect(food.brand).toBe('Ferrero')
+  })
+
+  it('works out per-100 g numbers from a per-serving-only entry with a serving weight', () => {
+    const food = readProduct({ product_name: 'Bar', serving_size: '1 bar (50 g)', serving_quantity: 50, nutriments: { 'energy-kcal_serving': 200, proteins_serving: 20 } })!
+    expect(food.per100).toEqual({ calories: 400, protein: 40, carbs: null, fats: null })
   })
 
   it('works out calories from kJ when kcal is missing', () => {
     const food = readProduct({ product_name: 'Oats', nutriments: { 'energy-kj_100g': 1569 } })
-    expect(food?.per100g.calories).toBe(375)
-    expect(food?.per100g.protein).toBeNull()
+    expect(food?.per100?.calories).toBeCloseTo(375, 0)
+    expect(food?.per100?.protein).toBeNull()
   })
 
-  it('reads numbers sent as text and leaves out a serving with no weight', () => {
-    const food = readProduct({ product_name: 'Milk', serving_size: '1 cup', nutriments: { 'energy-kcal_100g': '64', proteins_100g: '3.4' } })
-    expect(food?.per100g).toEqual({ calories: 64, protein: 3.4, carbs: null, fats: null })
+  it('has no serving when the package gives no size, and reads numbers sent as text', () => {
+    const food = readProduct({ product_name: 'Milk', nutriments: { 'energy-kcal_100g': '64', proteins_100g: '3.4' } })
+    expect(food?.per100).toEqual({ calories: 64, protein: 3.4, carbs: null, fats: null })
     expect(food?.serving).toBeNull()
   })
 
@@ -61,16 +110,27 @@ describe('readHit', () => {
   })
 })
 
-describe('nutrientsFor', () => {
-  it('scales from 100 g to the amount eaten', () => {
-    const food = readProduct(nutella)!
-    expect(nutrientsFor(food, 15)).toEqual({ calories: 81, protein: 0.9, carbs: 8.6, fats: 4.6 })
-    expect(nutrientsFor(food, 250)).toEqual({ calories: 1348, protein: 15.8, carbs: 143.8, fats: 77.3 })
+describe('defaultAmount and nutrientsFor', () => {
+  it('starts at one serving and matches the label exactly', () => {
+    const food = readProduct(clifBar)!
+    expect(defaultAmount(food)).toEqual({ kind: 'servings', count: 1 })
+    expect(nutrientsFor(food, { kind: 'servings', count: 1 })).toEqual({ calories: 250, protein: 10, carbs: 43, fats: 6 })
+    expect(nutrientsFor(food, { kind: 'servings', count: 1.5 })).toEqual({ calories: 375, protein: 15, carbs: 64.5, fats: 9 })
+    // The whole can of coke is the label's 140, not 100 ml worth
+    expect(nutrientsFor(readProduct(coke)!, { kind: 'servings', count: 1 })?.calories).toBe(140)
   })
 
-  it('keeps an unknown macro unknown', () => {
+  it('counts by weight or volume too', () => {
+    const food = readProduct(clifBar)!
+    expect(nutrientsFor(food, { kind: 'quantity', value: 34 })).toEqual({ calories: 125, protein: 5, carbs: 21.5, fats: 3 })
+    expect(nutrientsFor(readProduct(coke)!, { kind: 'quantity', value: 180 })?.calories).toBe(70)
+  })
+
+  it('starts at 100 g without a serving size, and keeps unknown macros unknown', () => {
     const food = readProduct({ product_name: 'Milk', nutriments: { 'energy-kcal_100g': 64 } })!
-    expect(nutrientsFor(food, 200)).toEqual({ calories: 128, protein: null, carbs: null, fats: null })
+    expect(defaultAmount(food)).toEqual({ kind: 'quantity', value: 100 })
+    expect(nutrientsFor(food, { kind: 'quantity', value: 200 })).toEqual({ calories: 128, protein: null, carbs: null, fats: null })
+    expect(nutrientsFor(food, { kind: 'servings', count: 1 })).toBeNull()
   })
 })
 
