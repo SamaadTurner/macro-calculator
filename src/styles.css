@@ -1448,6 +1448,42 @@ a {
   transform: translate(-50%, 0);
 }
 
+/* "A new version is ready": stays until the user picks Reload or Later. */
+.update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  width: min(520px, calc(100% - 24px));
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+}
+
+.update-banner p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.update-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-small {
+  min-height: 44px;
+  padding: 0 18px;
+  font-size: 0.9375rem;
+}
+
 /* ==========================================================================
    Larger screens
    ========================================================================== */

@@ -10,6 +10,7 @@ import { Wizard } from './components/Wizard'
 import { planAsText, Results } from './components/Results'
 import { LogView } from './components/LogView'
 import { CheckInView } from './components/CheckInView'
+import { UpdateBanner } from './components/UpdateBanner'
 import { loadCheckIns } from './coach/checkins'
 
 type View = { name: 'steps'; step: number } | { name: 'results' }
@@ -171,6 +172,8 @@ export default function App() {
           </a>
         </p>
       </footer>
+
+      <UpdateBanner />
 
       <div className={`toast${toast ? ' is-visible' : ''}`} role="status">
         {toast}
