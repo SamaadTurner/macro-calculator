@@ -1662,3 +1662,95 @@ a.btn {
   font-weight: 700;
   color: var(--accent);
 }
+
+/* ==========================================================================
+   Food search (Log tab)
+   ========================================================================== */
+.food-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.food-input {
+  flex: 1;
+  height: 48px;
+  padding: 0 14px;
+}
+
+.food-input input {
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.food-scan {
+  margin-top: 10px;
+}
+
+.food-status:empty {
+  display: none;
+}
+
+.food-status {
+  color: var(--text-2);
+  font-size: 0.9375rem;
+}
+
+.food-results {
+  display: grid;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.food-result {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.food-result:hover,
+.food-result:focus-visible {
+  border-color: var(--accent);
+}
+
+.food-name {
+  font-weight: 700;
+}
+
+.food-detail {
+  color: var(--text-2);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.food-chosen {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.food-preview {
+  font-weight: 700;
+}
+
+.food-video {
+  width: 100%;
+  max-height: 260px;
+  border-radius: var(--radius-sm);
+  background: #000;
+  object-fit: cover;
+}
+

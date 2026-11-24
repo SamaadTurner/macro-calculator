@@ -6,12 +6,14 @@ import { addDays, formatDay, isIsoDate, todayIso } from '../log/dates'
 import type { LogEntry } from '../log/entries'
 import { loadLog, removeEntry, saveLog, upsertEntry } from '../log/entries'
 import type { DraftErrors, LogDraft } from '../log/draft'
-import { draftErrors, draftToEntry, emptyDraft, entryToDraft, weightForDisplay } from '../log/draft'
+import { addFoodToDraft, draftErrors, draftToEntry, emptyDraft, entryToDraft, weightForDisplay } from '../log/draft'
+import type { FoodAmounts } from '../log/draft'
 import { trendChange, weightTrend } from '../log/trend'
 import { backupText, MAX_BACKUP_BYTES, mergeBackup, readBackup } from '../log/backup'
 import { Choice, FieldError, NumberField } from './fields'
 import { WeightChart } from './WeightChart'
 import { CsvImport } from './CsvImport'
+import { FoodLookup } from './FoodLookup'
 import { TrashIcon } from './Icons'
 
 const UNIT_OPTIONS = [
@@ -77,6 +79,12 @@ export function LogView({ unit, onUnitChange, showToast }: LogViewProps) {
     }
     setEntries(next)
     return true
+  }
+
+  function handleAddFood(name: string, amounts: FoodAmounts) {
+    setDraft(current => addFoodToDraft(current, amounts))
+    setErrors(current => ({ ...current, calories: undefined, form: undefined }))
+    showToast(`Added ${name} (${amounts.calories.toLocaleString('en-US')} cal). Press ${alreadyLogged ? 'Update day' : 'Save day'} to keep it.`)
   }
 
   function update(field: keyof LogDraft) {
@@ -229,6 +237,7 @@ export function LogView({ unit, onUnitChange, showToast }: LogViewProps) {
             The weekly check-in leaves this day out, so a missed meal does not make your burn look lower.
           </p>
         </div>
+        <FoodLookup onAdd={handleAddFood} />
         <details className="details log-macros" open={Boolean(draft.protein || draft.carbs || draft.fats || errors.protein || errors.carbs || errors.fats)}>
           <summary>Add macros (optional)</summary>
           <div className="macro-fields">

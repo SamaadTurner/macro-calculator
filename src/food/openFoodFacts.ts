@@ -1,0 +1,164 @@
+// Food search and barcode lookup through Open Food Facts, a free public food database
+// (https://world.openfoodfacts.org, data under the Open Database License).
+//
+// Their rules (checked 2026-11-24, openfoodfacts.github.io/openfoodfacts-server/api):
+// at most 10 searches and 15 product reads a minute per IP, and no search-as-you-type.
+// They also ask apps to name themselves in the User-Agent. A web page cannot set that, and
+// an extra header (X-User-Agent) makes the browser send a CORS preflight first, which their
+// server refused for Chrome in a test on 2026-11-24. So requests are plain GETs: the
+// browser's own User-Agent and the site's address are what they see.
+
+export interface FoodNutrients {
+  calories: number
+  protein: number | null
+  carbs: number | null
+  fats: number | null
+}
+
+export interface FoodItem {
+  code: string
+  name: string
+  brand: string
+  /** Per 100 g (or 100 ml for drinks; the label says which). */
+  per100g: FoodNutrients
+  /** One serving as the package states it, when it gives a weight. */
+  serving: { grams: number; label: string } | null
+}
+
+export type FoodResult<T> = { ok: true; value: T } | { ok: false; message: string }
+
+const BASE = 'https://world.openfoodfacts.org'
+const FIELDS = 'code,product_name,brands,nutriments,serving_size,serving_quantity'
+export const SEARCH_PAGE_SIZE = 20
+
+/** Remembers when requests were sent and refuses more than `max` in any minute. */
+export class MinuteLimit {
+  private times: number[] = []
+  constructor(private readonly max: number) {}
+
+  /** Seconds until another request may go, or 0 if one may go now (and counts it). */
+  take(now = Date.now()): number {
+    this.times = this.times.filter(time => now - time < 60_000)
+    if (this.times.length >= this.max) return Math.ceil((this.times[0] + 60_000 - now) / 1000)
+    this.times.push(now)
+    return 0
+  }
+}
+
+// A little under the published limits, so a second tab or a retry does not get the IP blocked.
+const searchLimit = new MinuteLimit(8)
+const productLimit = new MinuteLimit(12)
+
+const toNumber = (value: unknown): number | null => {
+  const number = typeof value === 'string' ? Number(value) : value
+  return typeof number === 'number' && Number.isFinite(number) && number >= 0 ? number : null
+}
+
+const roundTo1 = (value: number) => Math.round(value * 10) / 10
+
+/**
+ * Reads one product from the API, or null when it has no name or no calories (it cannot be
+ * logged then). Calories come from kcal, or from kJ when only that is given.
+ */
+export function readProduct(raw: unknown): FoodItem | null {
+  if (!raw || typeof raw !== 'object') return null
+  const product = raw as Record<string, unknown>
+  const name = typeof product.product_name === 'string' ? product.product_name.trim() : ''
+  const nutriments = (product.nutriments && typeof product.nutriments === 'object' ? product.nutriments : {}) as Record<string, unknown>
+  const kcal = toNumber(nutriments['energy-kcal_100g'])
+  const kj = toNumber(nutriments['energy-kj_100g'] ?? nutriments['energy_100g'])
+  const calories = kcal ?? (kj === null ? null : kj / 4.184)
+  if (!name || calories === null || calories > 900) return null
+
+  const grams = toNumber(product.serving_quantity)
+  const servingLabel = typeof product.serving_size === 'string' ? product.serving_size.trim() : ''
+  return {
+    code: typeof product.code === 'string' ? product.code : '',
+    name,
+    brand: typeof product.brands === 'string' ? product.brands.split(',')[0].trim() : '',
+    per100g: {
+      calories: roundTo1(calories),
+      protein: toNumber(nutriments.proteins_100g),
+      carbs: toNumber(nutriments.carbohydrates_100g),
+      fats: toNumber(nutriments.fat_100g),
+    },
+    serving: grams !== null && grams > 0 && grams <= 2000 ? { grams, label: servingLabel || `${grams} g` } : null,
+  }
+}
+
+/** What `grams` of the food adds: calories rounded to whole, macros to 0.1 g. */
+export function nutrientsFor(food: FoodItem, grams: number): FoodNutrients {
+  const share = grams / 100
+  const macro = (value: number | null) => (value === null ? null : roundTo1(value * share))
+  return {
+    calories: Math.round(food.per100g.calories * share),
+    protein: macro(food.per100g.protein),
+    carbs: macro(food.per100g.carbs),
+    fats: macro(food.per100g.fats),
+  }
+}
+
+/**
+ * Barcodes on food are EAN-13, UPC-A (12 digits), EAN-8, or GTIN-14. Returns the digits when
+ * the check digit is right, otherwise null, so a typo is caught before a lookup is spent.
+ */
+export function cleanBarcode(text: string): string | null {
+  const digits = text.replace(/[\s-]/g, '')
+  if (!/^(\d{8}|\d{12,14})$/.test(digits)) return null
+  const body = digits.slice(0, -1)
+  let sum = 0
+  for (let i = 0; i < body.length; i++) {
+    // From the right, digits are weighted 3, 1, 3, 1, ...
+    const weight = (body.length - i) % 2 === 1 ? 3 : 1
+    sum += Number(body[i]) * weight
+  }
+  const check = (10 - (sum % 10)) % 10
+  return check === Number(digits[digits.length - 1]) ? digits : null
+}
+
+const OFFLINE = 'No connection. Food search needs the internet; you can still type the numbers yourself.'
+const BUSY = 'Open Food Facts is busy or not answering. Try again in a minute, or type the numbers yourself.'
+
+async function getJson(url: string, signal?: AbortSignal): Promise<FoodResult<unknown>> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, message: OFFLINE }
+  try {
+    const response = await fetch(url, { signal })
+    if (!response.ok) return { ok: false, message: response.status === 404 ? 'not-found' : BUSY }
+    return { ok: true, value: await response.json() }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    return { ok: false, message: BUSY }
+  }
+}
+
+const waitMessage = (seconds: number) => `That is a lot of lookups in a minute. Try again in ${seconds} seconds (Open Food Facts asks apps to slow down).`
+
+/** Searches by name. Products without calories are left out. */
+export async function searchFoods(query: string, signal?: AbortSignal): Promise<FoodResult<FoodItem[]>> {
+  const terms = query.trim()
+  if (terms.length < 2) return { ok: false, message: 'Type at least 2 letters to search.' }
+  const wait = searchLimit.take()
+  if (wait > 0) return { ok: false, message: waitMessage(wait) }
+  const params = new URLSearchParams({ search_terms: terms, search_simple: '1', action: 'process', json: '1', page_size: String(SEARCH_PAGE_SIZE), fields: FIELDS })
+  const result = await getJson(`${BASE}/cgi/search.pl?${params}`, signal)
+  if (!result.ok) return { ok: false, message: result.message === 'not-found' ? BUSY : result.message }
+  const products = (result.value as { products?: unknown[] }).products
+  const foods = Array.isArray(products) ? products.map(readProduct).filter((food): food is FoodItem => food !== null) : []
+  return { ok: true, value: foods }
+}
+
+/** Looks up one product by barcode. */
+export async function lookupBarcode(barcode: string, signal?: AbortSignal): Promise<FoodResult<FoodItem>> {
+  const code = cleanBarcode(barcode)
+  if (!code) return { ok: false, message: 'That does not look like a barcode. Check the digits under the bars (8, 12, 13 or 14 of them).' }
+  const wait = productLimit.take()
+  if (wait > 0) return { ok: false, message: waitMessage(wait) }
+  const result = await getJson(`${BASE}/api/v2/product/${code}?fields=${FIELDS}`, signal)
+  const notFound = `No product with barcode ${code} in Open Food Facts yet. Type the numbers from the label instead.`
+  if (!result.ok) return { ok: false, message: result.message === 'not-found' ? notFound : result.message }
+  const body = result.value as { status?: number; product?: unknown }
+  if (body.status === 0 || !body.product) return { ok: false, message: notFound }
+  const food = readProduct({ ...(body.product as object), code })
+  if (!food) return { ok: false, message: `Barcode ${code} is in Open Food Facts but has no calories listed. Type the numbers from the label instead.` }
+  return { ok: true, value: food }
+}

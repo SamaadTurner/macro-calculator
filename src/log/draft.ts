@@ -70,6 +70,35 @@ export function draftToEntry(draft: LogDraft, unit: UnitSystem): LogEntry {
   return entry
 }
 
+/** Calories and macros of one food, as the food search works them out. */
+export interface FoodAmounts {
+  calories: number
+  protein: number | null
+  carbs: number | null
+  fats: number | null
+}
+
+/**
+ * Adds a food to what is typed for the day. An empty box counts as 0; a box with something
+ * that is not a number is left alone, so its error message stays. Macros keep one decimal
+ * here so several foods add up right; the saved day rounds them to whole grams.
+ */
+export function addFoodToDraft(draft: LogDraft, food: FoodAmounts): LogDraft {
+  const add = (text: string, amount: number | null, decimals: number): string => {
+    if (amount === null) return text
+    const current = text.trim() === '' ? 0 : parseNumber(text)
+    if (current === null || Number.isNaN(current)) return text
+    return String(roundTo(current + amount, decimals))
+  }
+  return {
+    ...draft,
+    calories: add(draft.calories, food.calories, 0),
+    protein: add(draft.protein, food.protein, 1),
+    carbs: add(draft.carbs, food.carbs, 1),
+    fats: add(draft.fats, food.fats, 1),
+  }
+}
+
 export function weightForDisplay(kg: number, unit: UnitSystem): number {
   return roundTo(unit === 'imperial' ? kgToLb(kg) : kg, 1)
 }
