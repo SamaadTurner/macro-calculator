@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addDays, daysBetween, isIsoDate, todayIso } from './dates'
 import type { LogEntry } from './entries'
-import { cleanEntry, loadLog, removeEntry, saveLog, upsertEntry } from './entries'
+import { addFoodToDay, cleanEntry, loadLog, removeEntry, saveLog, upsertEntry } from './entries'
 import { addFoodToDraft, draftErrors, draftToEntry, emptyDraft, entryToDraft } from './draft'
 import { trendChange, weightTrend } from './trend'
 import { BACKUP_FORMAT, backupText, mergeBackup, readBackup } from './backup'
@@ -249,3 +249,25 @@ describe('addFoodToDraft', () => {
     expect(addFoodToDraft(draft, food)).toMatchObject({ date: '2026-11-20', weight: '180', incomplete: true })
   })
 })
+
+describe('addFoodToDay', () => {
+  const food = { calories: 81, protein: 0.9, carbs: 8.6, fats: 4.6 }
+
+  it('adds to a saved day and keeps its weight and tick', () => {
+    const entries: LogEntry[] = [{ date: '2026-11-23', calories: 1000 }, { date: '2026-11-24', weightKg: 80, calories: 1200, protein: 100, incomplete: true }]
+    expect(addFoodToDay(entries, '2026-11-24', food)).toEqual([
+      { date: '2026-11-23', calories: 1000 },
+      { date: '2026-11-24', weightKg: 80, calories: 1281, protein: 101, carbs: 9, fats: 5, incomplete: true },
+    ])
+  })
+
+  it('starts a day that has nothing yet, and skips unknown macros', () => {
+    expect(addFoodToDay([], '2026-11-24', { calories: 128, protein: null, carbs: 10, fats: null })).toEqual([{ date: '2026-11-24', calories: 128, carbs: 10 }])
+  })
+
+  it('refuses to go over the limits instead of saving a typo', () => {
+    expect(addFoodToDay([{ date: '2026-11-24', calories: 9_950 }], '2026-11-24', food)).toBeNull()
+    expect(addFoodToDay([{ date: '2026-11-24', calories: 100, fats: 998 }], '2026-11-24', food)).toBeNull()
+  })
+})
+

@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import type { Page, Route } from '@playwright/test'
+import { fakeCamera, noCamera } from './camera'
 
 // Open Food Facts is never called for real: every request to it is answered here, so the
 // tests do not depend on (or add load to) their servers.
@@ -145,13 +146,13 @@ test('a typed barcode is checked, then looked up', async ({ page }) => {
   await openFoodPanel(page)
   const status = page.getByTestId('food-status')
 
-  await page.getByLabel('Barcode').fill('9310653103608')
+  await page.getByLabel('Barcode', { exact: true }).fill('9310653103608')
   await page.getByRole('button', { name: 'Look up' }).click()
   await expect(status).toContainText('does not look like a barcode')
   expect(seen.products).toEqual([])
 
-  await page.getByLabel('Barcode').fill('9310653103609')
-  await page.getByLabel('Barcode').press('Enter')
+  await page.getByLabel('Barcode', { exact: true }).fill('9310653103609')
+  await page.getByLabel('Barcode', { exact: true }).press('Enter')
   await expect(page.getByTestId('food-chosen')).toContainText('Greek Yogurt')
   expect(seen.products).toEqual(['9310653103609'])
 })
@@ -159,7 +160,7 @@ test('a typed barcode is checked, then looked up', async ({ page }) => {
 test('a barcode that is not in the database says so', async ({ page }) => {
   await fakeOpenFoodFacts(page, { product: null })
   await openFoodPanel(page)
-  await page.getByLabel('Barcode').fill('9310653103609')
+  await page.getByLabel('Barcode', { exact: true }).fill('9310653103609')
   await page.getByRole('button', { name: 'Look up' }).click()
   await expect(page.getByTestId('food-status')).toContainText('No product with code 9310653103609 in Open Food Facts yet')
 })
@@ -180,47 +181,27 @@ test('a busy or unreachable service gets a plain message, and typing still works
   await expect(page.locator('.toast')).toHaveText('Saved Nov 24')
 })
 
-test('scans a barcode with the camera where the browser can read barcodes', async ({ page }) => {
+test('scans a barcode with the camera in the Log panel', async ({ page }) => {
   const seen = await fakeOpenFoodFacts(page)
-  // A fake camera (a blank canvas) and a fake barcode reader that sees the yogurt's code
-  await page.addInitScript(() => {
-    class FakeReader {
-      async detect() {
-        return [{ rawValue: '9310653103609' }]
-      }
-    }
-    ;(window as unknown as { BarcodeDetector: unknown }).BarcodeDetector = FakeReader
-    const canvas = document.createElement('canvas')
-    canvas.width = 64
-    canvas.height = 48
-    // Keep drawing, like a camera sending frames
-    const context = canvas.getContext('2d')!
-    let shade = 0
-    setInterval(() => {
-      shade = (shade + 40) % 255
-      context.fillStyle = `rgb(${shade}, ${shade}, ${shade})`
-      context.fillRect(0, 0, 64, 48)
-    }, 50)
-    Object.defineProperty(navigator, 'mediaDevices', {
-      value: { getUserMedia: async () => canvas.captureStream() },
-    })
-  })
+  await fakeCamera(page, { barcode: '9310653103609', builtInReader: 'fake-native' })
   await openFoodPanel(page)
   await page.getByRole('button', { name: 'Scan with camera' }).click()
   await expect(page.getByTestId('food-chosen')).toContainText('Greek Yogurt')
   await expect(page.getByTestId('food-scanner')).toHaveCount(0)
-  await expect(page.getByLabel('Barcode')).toHaveValue('9310653103609')
+  await expect(page.getByLabel('Barcode', { exact: true })).toHaveValue('9310653103609')
   expect(seen.products).toEqual(['9310653103609'])
+  // The camera is switched off once the code is read
+  expect(await page.evaluate(() => (window as unknown as { cameraStops: number }).cameraStops)).toBeGreaterThan(0)
 })
 
-test('without a barcode reader there is no scan button', async ({ page }) => {
+test('without a camera there is no scan button, and typing the digits still works', async ({ page }) => {
   await fakeOpenFoodFacts(page)
-  await page.addInitScript(() => {
-    delete (window as unknown as { BarcodeDetector?: unknown }).BarcodeDetector
-  })
+  await noCamera(page)
   await openFoodPanel(page)
-  await expect(page.getByLabel('Barcode')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Scan with camera' })).toHaveCount(0)
+  await page.getByLabel('Barcode', { exact: true }).fill('9310653103609')
+  await page.getByRole('button', { name: 'Look up' }).click()
+  await expect(page.getByTestId('food-chosen')).toContainText('Greek Yogurt')
 })
 
 for (const scheme of ['light', 'dark'] as const) {
